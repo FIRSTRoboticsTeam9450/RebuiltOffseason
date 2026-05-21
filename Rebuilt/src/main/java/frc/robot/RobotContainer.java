@@ -214,14 +214,15 @@ public class RobotContainer {
     //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false))
     // );
 
-    // DRIVER.leftTrigger().onTrue(
-    //     CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
-    //     new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
-    //     // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
-    // ).onFalse(
-    //   CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
-    //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
-    // );
+    DRIVER.leftTrigger().onTrue(
+        CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
+        new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
+        // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
+    ).onFalse(
+      CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
+      new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
+    );
+    
     DRIVER.leftTrigger().onTrue(
         CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
         new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))

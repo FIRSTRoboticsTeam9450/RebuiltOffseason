@@ -53,7 +53,7 @@ public class CoordinationSubsystem extends SubsystemBase {
     private boolean shouldBeIntaking = false;
     private boolean rejecting = false;
     private boolean autoRejecting = false;
-    private boolean fastTransfer = true;
+    private boolean fastTransfer = false;
     private boolean intakePushing = false;
 
     private boolean overrideTrench = false;
@@ -65,6 +65,8 @@ public class CoordinationSubsystem extends SubsystemBase {
     private boolean checkZeroing = false;
     private final LoggedNetworkBoolean logDebuggingToggle = new LoggedNetworkBoolean("/Tuning/Debugging Toggles/Coord", false);
     private boolean shiftingTurret = true;
+
+    private boolean chillMode = true;
 
     public CoordinationSubsystem() {
         
@@ -306,8 +308,13 @@ public class CoordinationSubsystem extends SubsystemBase {
                 shooterHoodState = AngleState.AIMING;
                 shooterVelocState = ShooterState.SHOOTING;
                 if (!rejecting && !autoRejecting) {
+                    // if (chillMode) {
+                    //     transferState = TransferState.SLOW_RUN_IN;
+                    // } else {
+                    //     transferState = TransferState.RUN_IN;
+                    // }
                     if (DriverStation.isAutonomous() || !fastTransfer) {
-                        transferState = TransferState.RUN_IN;
+                        transferState = TransferState.SLOW_RUN_IN;
                     } else {
                         transferState = TransferState.FAST_RUN_IN;
                     }

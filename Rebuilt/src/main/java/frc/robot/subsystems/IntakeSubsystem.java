@@ -78,7 +78,7 @@ public final class IntakeSubsystem extends SubsystemBase{
     private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/kG", 0.0); // 0
 
     private LoggedNetworkNumber logIntakeTarget = new LoggedNetworkNumber("/Tuning/Intake/Angle/Intaking Target", 0.052);
-    private LoggedNetworkNumber logIntakingTarget = new LoggedNetworkNumber("/Tuning/Intake/Wheels/Target", 5);
+    private LoggedNetworkNumber logIntakingTarget = new LoggedNetworkNumber("/Tuning/Intake/Wheels/Target", 2);
 
     private double intakingTargetVolts = logIntakingTarget.get();
     
@@ -266,7 +266,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 }
 
                 if(CoordinationSubsystem.getInstance().isFastTransfer()) {
-                    motorWheels.setControl(voltageRequest.withOutput(5));
+                    motorWheels.setControl(voltageRequest.withOutput(10));
                 }
                 else {
                     motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts));
