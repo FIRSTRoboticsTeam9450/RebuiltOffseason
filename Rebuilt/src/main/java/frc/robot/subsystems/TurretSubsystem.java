@@ -916,10 +916,10 @@ public class TurretSubsystem extends SubsystemBase {
     }
     
     public void increaseManualAdjust() {
-        manualShift += 1;
+        manualShift += 5;
     }
     public void decreaseManualAdjust() {
-        manualShift -= 1;
+        manualShift -= 5;
     }
 
     public void resetManualAdjust() {

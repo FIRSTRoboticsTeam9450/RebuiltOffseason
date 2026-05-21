@@ -222,15 +222,15 @@ public class RobotContainer {
       CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
       new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
     );
-    
-    DRIVER.leftTrigger().onTrue(
-        CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
-        new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
-        // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
-    ).onFalse(
-      CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
-      new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
-    );
+
+    // DRIVER.leftTrigger().onTrue(
+    //     CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
+    //     new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
+    //     // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
+    // ).onFalse(
+    //   CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
+    //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
+    // );
 
 
 
@@ -246,9 +246,9 @@ public class RobotContainer {
       CoordinationSubsystem.getInstance().setRejectingCommand(false)
     );
 
-    DRIVER.y().onTrue(new ResetIMU(drivetrain));
+    DRIVER.a().onTrue(new ResetIMU(drivetrain));
 
-    DRIVER.rightBumper().whileTrue(new DriveBrakeCommand(drivetrain));
+    // DRIVER.rightBumper().whileTrue(new DriveBrakeCommand(drivetrain));
 
     DRIVER.back().onTrue(
       new InstantCommand(() -> {IntakeSubsystem.getInstance().zeroEncoders(); ShooterSubsystem.getInstance().zeroEncoder();}).ignoringDisable(true)
@@ -268,11 +268,11 @@ public class RobotContainer {
       CoordinationSubsystem.getInstance().setIntakePushing(false)
     );
 
-    OPERATOR.leftBumper().onTrue(
+    DRIVER.leftBumper().onTrue(
       CoordinationSubsystem.getInstance().setIntakeCommand().alongWith(CoordinationSubsystem.getInstance().setFireCommand())
     );
 
-    OPERATOR.rightBumper().onTrue(
+    DRIVER.rightBumper().onTrue(
       CoordinationSubsystem.getInstance().setFireCommand(false).alongWith(CoordinationSubsystem.getInstance().setIntakeCommand(false))
     );
     
@@ -280,20 +280,20 @@ public class RobotContainer {
       CoordinationSubsystem.getInstance().setForceTrenchCommand()
     );
 
-    OPERATOR.x().whileTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
-    OPERATOR.y().onTrue(CoordinationSubsystem.getInstance().resetManualAdjust());
-    OPERATOR.b().whileTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
+    DRIVER.x().whileTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
+    DRIVER.y().onTrue(CoordinationSubsystem.getInstance().resetManualAdjust());
+    DRIVER.b().whileTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
 
     OPERATOR.a().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setForceClimberDownCommand()).alongWith(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.PREPARING_FOR_SHOOTING, true)));
 
-    OPERATOR.b().and(OPERATOR.x()).and(OPERATOR.y()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
+    DRIVER.b().and(OPERATOR.x()).and(OPERATOR.y()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
 
-    OPERATOR.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
+    DRIVER.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
 
-    OPERATOR.povUp().whileTrue(
+    DRIVER.povUp().whileTrue(
       new InstantCommand(() -> ShooterSubsystem.getInstance().addManualHoodShift())
     );
-    OPERATOR.povDown().whileTrue(
+    DRIVER.povDown().whileTrue(
       new InstantCommand(() -> ShooterSubsystem.getInstance().subtractManualHoodShift())
     );
 
