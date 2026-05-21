@@ -32,7 +32,8 @@ public class TeamCANdleAnimationCommand extends Command {
   public static final RGBWColor BLUE_GRADIENT_2   = new RGBWColor(  0,  15, 210);
   public static final RGBWColor ORANGE            = new RGBWColor(255,  17,   0);
   public static final RGBWColor ORANGE_GRADIENT   = new RGBWColor(220,  25,   0);
-  public static final RGBWColor ORANGE_GRADIENT_2 = new RGBWColor(225,  35,   0);
+  public static final RGBWColor 
+  ORANGE_GRADIENT_2 = new RGBWColor(225,  35,   0);
 
   // Color arrays
   private ArrayList<RGBWColor> COLORS = new ArrayList<>();

@@ -80,7 +80,7 @@ public class RobotContainer {
   public static boolean slewMode = false;
   private static final double scalarFactorForSpeed = 0.15;
 
-  public static double maxSpeed = DEFAULT_MAX_SPEED * 0.8;
+  public static double maxSpeed = DEFAULT_MAX_SPEED * 0.2;
   public static double maxAngularRate = DEFAULT_MAX_ANGULAR_RATE * 1;
 
   private final CommandXboxController DRIVER = new CommandXboxController(Constants.DRIVER_CONTROLLER_PORT);
@@ -279,9 +279,9 @@ public class RobotContainer {
       CoordinationSubsystem.getInstance().setForceTrenchCommand()
     );
 
-    OPERATOR.x().onTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
+    OPERATOR.x().whileTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
     OPERATOR.y().onTrue(CoordinationSubsystem.getInstance().resetManualAdjust());
-    OPERATOR.b().onTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
+    OPERATOR.b().whileTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
 
     OPERATOR.a().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setForceClimberDownCommand()).alongWith(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.PREPARING_FOR_SHOOTING, true)));
 
@@ -289,18 +289,25 @@ public class RobotContainer {
 
     OPERATOR.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
 
-    OPERATOR.povUp().onTrue(
-      Commands.either(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.STORING)), ClimberSubsystem.getInstance().setClimbStateAndLevelCommand(), (() -> DriverStation.isTest()))
+    OPERATOR.povUp().whileTrue(
+      new InstantCommand(() -> ShooterSubsystem.getInstance().addManualHoodShift())
+    );
+    OPERATOR.povDown().whileTrue(
+      new InstantCommand(() -> ShooterSubsystem.getInstance().subtractManualHoodShift())
     );
 
-    OPERATOR.povDown().onTrue(
-      VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(true)
-    ).onFalse(
-      VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(false)
-    );
+    // OPERATOR.povUp().onTrue(
+    //   Commands.either(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.STORING)), ClimberSubsystem.getInstance().setClimbStateAndLevelCommand(), (() -> DriverStation.isTest()))
+    // );
 
-    OPERATOR.povRight().onTrue(coordSub.setStateCommand(AbsoluteStates.EMERGENCY, true));
-    OPERATOR.povLeft().onTrue(coordSub.setStateCommand(AbsoluteStates.DEFENSE, true));
+    // OPERATOR.povDown().onTrue(
+    //   VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(true)
+    // ).onFalse(
+    //   VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(false)
+    // );
+
+    // OPERATOR.povRight().onTrue(coordSub.setStateCommand(AbsoluteStates.EMERGENCY, true));
+    // OPERATOR.povLeft().onTrue(coordSub.setStateCommand(AbsoluteStates.DEFENSE, true));
     // OPERATOR.povRight().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbLevel(ClimbLevel.L1)).alongWith(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.INIT))));
     // OPERATOR.povLeft().onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.CLIMB, false).alongWith(new InstantCommand(() -> climbSub.setClimbLevel(ClimbLevel.AUTO)).alongWith(new WaitCommand(0.15)).alongWith(new InstantCommand(() -> climbSub.setClimbState(ClimbStates.INIT)))));
     // OPERATOR.povRight().onTrue(new InstantCommand(() -> climbSub.setClimbLevel(ClimbLevel.AUTO)).alongWith(new InstantCommand(() -> climbSub.setClimbState(ClimbStates.END))));

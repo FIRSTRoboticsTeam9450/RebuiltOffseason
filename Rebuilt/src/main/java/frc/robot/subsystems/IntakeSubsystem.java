@@ -266,7 +266,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 }
 
                 if(CoordinationSubsystem.getInstance().isFastTransfer()) {
-                    motorWheels.setControl(voltageRequest.withOutput(10));
+                    motorWheels.setControl(voltageRequest.withOutput(5));
                 }
                 else {
                     motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts));

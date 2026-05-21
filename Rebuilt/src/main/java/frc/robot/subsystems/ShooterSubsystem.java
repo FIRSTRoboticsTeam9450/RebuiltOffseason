@@ -119,12 +119,12 @@ public class ShooterSubsystem extends SubsystemBase {
     private final MotionMagicVelocityVoltage outtakeVRequest;
 
     // Tuning velocity table
-    private LoggedNetworkNumber logTuningShooterVelocity = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/Velocity", 40);
+    private LoggedNetworkNumber logTuningShooterVelocity = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/Velocity", 20);
     private LoggedNetworkBoolean logIsTuningShooterVelocity = new LoggedNetworkBoolean("/Tuning/Shooter/Outtake/TuningShooterVelocity?", false);
     
     // Flags
     private boolean isTuningShooterVelocity = logIsTuningShooterVelocity.get();
-    private boolean isOverrideAngle = false;
+    private boolean isOverrideAngle = true;
     private boolean isZeroingDone = false;
     private boolean hasSwitchedBack = false;
     private boolean hasReachedShooterVelocity = false;
@@ -133,6 +133,7 @@ public class ShooterSubsystem extends SubsystemBase {
     private final LoggedNetworkBoolean logDebuggingToggle = new LoggedNetworkBoolean("/Tuning/Debugging Toggles/Shooter", false);
 
     private double manualShift = 0; // For manually adjusting shooter velocity on the fly, added to getShooterVeloc()
+    private double manualHoodShift = 0; // For manually adjusting hood angle on the fly, added to getShooterAngle()
     private double wheelWareAdjustment = 1.5 - 3.5;
 
     // Timer
@@ -336,7 +337,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public void publishLogs() {
         Logger.recordOutput("Rebuilt/Shooter/Hood/currentState", currentAngleState);
-        Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointMotorRevs", targetHoodHeight);
+        Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointMotorRevs", targetHoodHeight + manualHoodShift);
         // Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointDegrees", targetHoodHeight * degreesPerRev + degreesToZero);
         Logger.recordOutput("Rebuilt/Shooter/Hood/current motor revolutions", angleMotor.getPosition().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Shooter/Hood/Left Supply Amps", angleMotor.getSupplyCurrent().getValueAsDouble());
@@ -352,6 +353,7 @@ public class ShooterSubsystem extends SubsystemBase {
         // Logger.recordOutput("Rebuilt/Shooter/Outtake/Is at Goal?", isVelocityWithinTolerance());
 
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Manual Adjustment", manualShift);
+        Logger.recordOutput("Rebuilt/Shooter/Hood/Manual Adjustment", manualHoodShift);
 
 
         if (logDebuggingToggle.get()) { // To get rid of loop overruns
@@ -484,7 +486,8 @@ public class ShooterSubsystem extends SubsystemBase {
         else {
             targetShooterVeloc = logTuningShooterVelocity.get();
         }
-        targetShooterVeloc = MathUtil.clamp(targetShooterVeloc, 0, 100);
+        targetShooterVeloc = logTuningShooterVelocity.get();
+        targetShooterVeloc = MathUtil.clamp(targetShooterVeloc + manualShift, 0, 100);
         return targetShooterVeloc + manualShift;
     }
 
@@ -537,7 +540,9 @@ public class ShooterSubsystem extends SubsystemBase {
             }
         }
         else {
-            targetHoodHeight = targetHoodAngleOverride;
+            targetHoodHeight = 0;
+            targetHoodHeight += manualHoodShift;
+            targetHoodHeight = MathUtil.clamp(targetHoodHeight, hoodAngleMin, hoodAngleMax);
         }
         return targetHoodHeight;
 
@@ -679,7 +684,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void addManualVelocityShift() {
-        manualShift += 0.5;
+        manualShift += 2.5;
     }
 
     public void addManualVelocityShift(double value) {
@@ -687,11 +692,27 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void subtractManualVelocityShift() {
-        manualShift -= 0.5;
+        manualShift -= 2.5;
     }
 
     public void resetManualVelocityShift() {
         manualShift = 0;
+    }
+
+    public void addManualHoodShift() {
+        manualHoodShift += .5;
+    }
+
+    public void addManualHoodShift(double value) {
+        manualHoodShift += value;
+    }
+
+    public void subtractManualHoodShift() {
+        manualHoodShift -= .5;
+    }
+
+    public void resetManualHoodShift() {
+        manualHoodShift = 0;
     }
 
     // -------------------------------------------- UPDATE BASED ON LOGS -------------------------------------------- //
