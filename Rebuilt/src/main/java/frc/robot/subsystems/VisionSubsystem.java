@@ -124,30 +124,6 @@ public class VisionSubsystem extends SubsystemBase {
 
     // Logging
     private volatile Pose2d lastFusedPose = null;   // Last fused pose from vision
-    private volatile Translation2d lastTargetPose = null;
-    private volatile Translation2d lastAdjustedTargetPose = null;
-    private String currentFerryZone = "none";
-
-
-    // Targeting Data
-    public enum ZoneState {
-        SHOOTING_ZONE,
-        FERRY_ZONE_TOP,
-        FERRY_ZONE_BOTTOM,
-        FERRY_ZONE_MID,
-        HARD_TRENCH_DEADZONE,
-        SOFT_TRENCH_DEADZONE,
-        CLIMB_DEADZONE,
-        BACK_SHOOT,
-        SHOOT_OVER_NET
-    }
-    
-    ZoneState currentZone = ZoneState.SHOOTING_ZONE;
-    Translation2d currentTarget = ZoneTargets.SHOOTING_TARGET;
-    Translation2d ferryTarget = ZoneTargets.FERRY_TOP_TARGET;
-    Translation2d neutralTarget = ZoneTargets.NEUTRAL_TOP_TARGET;
-    Translation2d ferryMidTarget = ZoneTargets.FERRY_MID_LEFT_TARGET;
-    boolean ferryingTop = true;
 
     private ChassisSpeeds prevRobotVelocity = new ChassisSpeeds(0, 0, 0);
     private double prevTimeStamp = 0;
@@ -157,9 +133,6 @@ public class VisionSubsystem extends SubsystemBase {
     private LoggedNetworkBoolean logDebuggingToggle = new LoggedNetworkBoolean("/Tuning/Debugging Toggles/Vision", false);
     double loopOffset = 0;
 
-    private boolean useCustomTarget = false;
-    private Translation2d customTarget = ImportantFieldPoses.FERRY_MID_RIGHT_TARGET; //new Translation2d();
-    
     private final CommandXboxController DRIVER = new CommandXboxController(Constants.DRIVER_CONTROLLER_PORT);
     // -------------------------
     // Constructor (private for singleton)
@@ -211,13 +184,6 @@ public class VisionSubsystem extends SubsystemBase {
      */
     @Override
     public void periodic() {
-
-        if (updateTargetAndZoneOffset > 10) {
-            updateTargetAndZoneOffset = 0;
-            updateTargetAndZone();
-        } else {
-            updateTargetAndZoneOffset++;
-        }
 
         if (updateVisionOffset > 1) {
             updateVisionOffset = 0;
@@ -508,7 +474,6 @@ public class VisionSubsystem extends SubsystemBase {
     private void publishLogs() {
         // Overall vision state
         Logger.recordOutput("Rebuilt/Vision/Total/Last Vision Pose", lastVisionPose);
-        Logger.recordOutput("Rebuilt/Vision/Ferrying Top", ferryingTop);
         // Logger.recordOutput("Rebuilt/Vision/Total/Last Fused Pose", lastFusedPose);
         // Logger.recordOutput("Rebuilt/Vision/Total/Last Target Pose", lastTargetPose);
         // Logger.recordOutput("Rebuilt/Vision/Total/Last Vision Timestamp", lastVisionTimestamp);
@@ -523,18 +488,6 @@ public class VisionSubsystem extends SubsystemBase {
         // Fusion thresholds
         // Logger.recordOutput("Rebuilt/Vision/Config/Max Translation Diff", maxTranslationDiff);
         // Logger.recordOutput("Rebuilt/Vision/Config/Max Rotation Diff", Math.toDegrees(maxRotationDiff));
-
-        Logger.recordOutput("Rebuilt/Vision/CurrentZone", currentZone);
-
-        // Logger.recordOutput("Rebuilt/Vision/Bump Measurement Count", bumpMeasurmentCount);
-        Logger.recordOutput("Rebuilt/Vision/CurrentFerryZone", currentFerryZone);
-        if (loopOffset > 5) {
-            loopOffset = 0;
-            Logger.recordOutput("Rebuilt/Vision/CurrentTarget", getCurrentBotPoseAllianceUnspecific().plus(new Transform2d(getAdjustedCurrentTarget(), new Rotation2d())));
-        } else {
-            loopOffset++;
-        }
-
         // Logger.recordOutput("Rebuilt/Vision/Distance From target", getDistanceToTarget(getTargetRelativeToBot()));
 
         // for (LimelightObject limelight : LIMELIGHT_LIST) {
@@ -580,15 +533,7 @@ public class VisionSubsystem extends SubsystemBase {
 
             // Current bot pose
             // Logger.recordOutput("Rebuilt/Vision/CurrentPose", drivetrain.getState().Pose);
-            Logger.recordOutput("Rebuilt/Vision/CurrentPoseFromMethod", getCurrentBotPoseAllianceUnspecific());
             Logger.recordOutput("Rebuilt/Vision/CurrentPose", drivetrain.getState().Pose);
-            Logger.recordOutput("Rebuilt/Vision/Alliance", DriverStation.getAlliance().toString());
-            Logger.recordOutput("Rebuilt/Vision/CurrentTargetFromMethod", new Pose2d(getAdjustedCurrentTarget(), new Rotation2d()));
-            // Logger.recordOutput("Rebuilt/Vision/FutureTarget", new Pose2d(getAdjustedFutureTarget(.02), new Rotation2d(getCurrentBotPoseAllianceUnspecific().getRotation().getRadians())).minus(getCurrentBotPoseAllianceUnspecific()));
-            Logger.recordOutput("Rebuilt/Vision/CurrentTarget", getCurrentBotPoseAllianceUnspecific().plus(new Transform2d(getAdjustedCurrentTarget(), new Rotation2d())));
-            Logger.recordOutput("Rebuilt/Vision/CurrentTargetWRTRobot", getTargetRelativeToBot());
-            Logger.recordOutput("Rebuilt/Vision/Distance From target", getDistanceToTarget(getAdjustedCurrentTarget()));
-            Logger.recordOutput("Rebuilt/Vision/CurrentTargetWRTRobot", new Pose2d(currentTarget, new Rotation2d()));
             // getAdjustedFutureTarget(.5);
 
         }
@@ -604,396 +549,6 @@ public class VisionSubsystem extends SubsystemBase {
     // -------------------------
     public Pose2d getLastFusedPose() { return lastFusedPose; }
     public Pose2d getLastVisionPose() { return lastVisionPose; }
-
-    /**
-     * Computes the distance from robot to a target transform.
-     */
-    public double getDistanceToTarget(Translation2d target) {
-        // Pose2d drivePose = getCurrentBotPoseAllianceUnspecific();
-        // Transform2d tmpTransform = new Transform2d(drivePose.getX(), drivePose.getY(), drivePose.getRotation());
-        // Transform2d currentPose = tmpTransform;
-        // if (currentPose == null) return Double.POSITIVE_INFINITY;
-        // lastTargetPose = target;
-        return Math.sqrt(Math.pow(target.getX(), 2) + Math.pow(target.getY(), 2));
-        // return currentPose.getTranslation().getDistance(target);
-    }
-    
-    /**
-     * Computes the robot-to-target transform in robot frame.
-     * TODO: Rewrite
-     */
-    public Translation2d getRobotToTarget(Translation2d target) {
-        if (lastVisionPose == null) return null;
-
-        lastTargetPose = target;
-
-        Translation2d deltaField = target.minus(lastVisionPose.getTranslation());
-        Translation2d translationRobotFrame = deltaField.rotateBy(lastVisionPose.getRotation().unaryMinus());
-        // Rotation2d rotationRobotToTarget = target.getRotation().minus(lastVisionPose.getRotation());
-
-        return translationRobotFrame;
-    }
-
-    /**
-     * Get the current robot pose unalliance specific
-     * Will always be from the alliance's corner
-     * @return
-     */
-    public Pose2d getCurrentBotPoseAllianceUnspecific() {
-        Pose2d currentBluePose = drivetrain.getState().Pose;
-        Pose2d alliancePose = new Pose2d(new Translation2d(0,0), new Rotation2d());
-
-        if(DriverStation.getAlliance().toString().equals("Optional[Red]")){
-            alliancePose = new Pose2d(ZoneConstantsWelded.RED_CORNER, new Rotation2d(Math.PI));
-            // Pose2d newBotPose = currentBluePose.plus(redCornerPose);
-            // Transform2d calculated = redCorner.minus(currentBluePose);
-            // return new Pose2d(calculated.getTranslation(), calculated.getRotation());
-            
-        }
-        return currentBluePose.relativeTo(alliancePose).transformBy(TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT);
-        
-    }
-
-    public Translation2d getTargetRelativeToBot () {
-        Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
-        Pose2d currentTargetPose = new Pose2d(currentTarget, new Rotation2d());
-        return currentTargetPose.minus(currentPose).getTranslation();
-    }
-
-    public ChassisSpeeds getVelocityOfBot() {
-        ChassisSpeeds speeds = drivetrain.getState().Speeds;
-        Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
-        return ChassisSpeeds.fromRobotRelativeSpeeds(speeds, currentPose.getRotation());
-    }
-
-    public Translation2d getTargetPose() {
-        return lastTargetPose;
-    }
-
-    public Translation2d getCurrentTarget() {
-        return currentTarget;
-    }
-    
-    public Translation2d getAdjustedCurrentTarget() {
-        lastAdjustedTargetPose = getAdjustedTarget(getTargetRelativeToBot(), lastAdjustedTargetPose);
-        return lastAdjustedTargetPose;
-    }
-    /**
-     * Get the pose of the adjusted target based on how fast it's moving
-     * @return
-     */
-    public Translation2d getAdjustedTarget(Translation2d givenTargetWRTBot, Translation2d lastTargetPose) {
-        Translation2d targetWRTBot = givenTargetWRTBot;
-        // ChassisSpeeds velocityRobotWRTRobot = drivetrain.getState().Speeds;
-        ChassisSpeeds velocityRobotWRTRobot = ChassisSpeeds.fromFieldRelativeSpeeds(getVelocityOfTurret(), getCurrentBotPoseAllianceUnspecific().getRotation());
-    
-
-        double timeToShoot = getTimeToShoot(targetWRTBot);
-        if(lastTargetPose != null) {
-            timeToShoot = getTimeToShoot(lastTargetPose);
-        }
-
-        // Calculate the amount the ball moved due to robot velocity in the time it takes for the ball to land in the target
-        Translation2d amountMoved = new Translation2d(velocityRobotWRTRobot.vxMetersPerSecond * timeToShoot, velocityRobotWRTRobot.vyMetersPerSecond * timeToShoot);
-        Translation2d finalTarget = targetWRTBot.plus(amountMoved.times(-1));
-
-        // Iterate to zoom in to find the final target, get closer and closer each time
-        for(int i = 0; i < 6; i++) {
-            timeToShoot = getTimeToShoot(finalTarget);
-            amountMoved =  new Translation2d(velocityRobotWRTRobot.vxMetersPerSecond * timeToShoot, velocityRobotWRTRobot.vyMetersPerSecond * timeToShoot);
-            finalTarget = targetWRTBot.plus(amountMoved.times(-1));
-        }
-        
-        return finalTarget;
-    }
-
-    public ChassisSpeeds getVelocityOfTurret() { // jump point
-        ChassisSpeeds velocityRobotWRTRobot = drivetrain.getState().Speeds;
-        ChassisSpeeds velocityRobotWRTField = ChassisSpeeds.fromRobotRelativeSpeeds(velocityRobotWRTRobot, getCurrentBotPoseAllianceUnspecific().getRotation());
-        // new ChassisSpeeds(RobotContainer.slowMode ? RobotContainer.driveXAccelLimiter.calculate(-RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed) : -RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed, 
-        //             RobotContainer.slowMode ? RobotContainer.driveYAccelLimiter.calculate(-RobotContainer.driveBezier.getOutput(DRIVER.getLeftX())) : (-RobotContainer.driveBezier.getOutput(DRIVER.getLeftX()) * RobotContainer.maxSpeed), // Drive left with negative X (left)
-        //             RobotContainer.slowMode ? RobotContainer.rotationAccelLimiter.calculate(-RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate) : -RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate);
-        
-        //new ChassisSpeeds(
-        //     -RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed, 
-        //     -RobotContainer.driveBezier.getOutput(DRIVER.getLeftX()) * RobotContainer.maxSpeed, 
-        //     -RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate);// ChassisSpeeds.fromRobotRelativeSpeeds(velocityRobotWRTRobot, getCurrentBotPoseAllianceUnspecific().getRotation());
-        double rotationSpeed = velocityRobotWRTField.omegaRadiansPerSecond;
-        Pose2d currentTurretPose = getCurrentBotPoseAllianceUnspecific();
-        double turretOffset = TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT.getX();
-
-        // double yOffset = TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT.getY();
-        double xOffsetWRTField = turretOffset * Math.cos(currentTurretPose.getRotation().getRadians());
-        double yOffsetWRTField = turretOffset * Math.sin(currentTurretPose.getRotation().getRadians());
-
-        double finalXVelocity = velocityRobotWRTField.vxMetersPerSecond + (-rotationSpeed * yOffsetWRTField);// * currentTurretPose.getX();
-        double finalYVelocity = velocityRobotWRTField.vyMetersPerSecond + (rotationSpeed * xOffsetWRTField);// * currentTurretPose.getY();
-        
-        return new ChassisSpeeds(finalXVelocity, finalYVelocity, rotationSpeed);
-    }
-
-    /**
-     * Get the future target's pose in a certain amount of time, use this and the 
-     * current target's pose to find velocity
-     * @param time
-     * @return
-     */
-    public Translation2d getAdjustedFutureTarget(double time) {
-
-        // Calculate how much the robot will have moved into the future
-        Pose2d futurePoseWRTCurrentBot = getFuturePoseWRTCurrentBot(time);
-
-        // Coordinate math stuff //
-        Pose2d targetWRTCurrentBot = new Pose2d(getTargetRelativeToBot(), new Rotation2d()); // Correct
-        Pose2d futurePoseWRTField = getFuturePoseWRTField(time); // ABSOLUTELY CORRECT
-        Transform2d futurePoseToTarget = targetWRTCurrentBot.minus(futurePoseWRTCurrentBot); 
-        Transform2d futurePoseToAdjustedTarget = new Transform2d(getAdjustedTarget(futurePoseToTarget.getTranslation(), futurePoseToTarget.getTranslation()), new Rotation2d());
-
-        // Logging
-        Logger.recordOutput("Rebuilt/Vision/FuturePose", futurePoseWRTField);
-        Logger.recordOutput("Rebuilt/Vision/FutureTarget", futurePoseWRTField.plus(futurePoseToAdjustedTarget));
-
-        return getAdjustedTarget(futurePoseToTarget.getTranslation(), futurePoseToTarget.getTranslation());
-
-    }
-
-    /**
-     * Get the air time of the ball to get to its target
-     * @param target
-     * @return
-     */
-    public double getTimeToShoot(Translation2d target) {
-        double timeToShoot = 1.2;
-        // TODO: UNCOMMENT LATER //
-        if(currentTarget.equals(ZoneTargets.SHOOTING_TARGET)) {
-            timeToShoot = ShooterSubsystem.getInstance().getShootingDistanceToTime(getDistanceToTarget(target));
-        }
-        else {
-            timeToShoot = ShooterSubsystem.getInstance().getFerryingDistanceToTime(getDistanceToTarget(target));
-        }
-        return timeToShoot;
-    }
-
-    public ZoneState getCurrentZone() {
-        return currentZone;
-    }
-
-    public boolean trenchNow() {
-        double time = 0.95;
-        Pose2d futurePoseWRTField = getFuturePoseWRTField(time); // ABSOLUTELY CORRECT
-
-        if(getZone(futurePoseWRTField) != null) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public Pose2d getFuturePoseWRTField(double time) {
-        Pose2d currentPoseWRTField = getCurrentBotPoseAllianceUnspecific();
-
-        // Calculate how much the robot will have moved into the future
-        Pose2d futurePoseWRTCurrentBot = getFuturePoseWRTCurrentBot(time);
-
-        // Coordinate math stuff //
-        Transform2d fieldWRTCurrentTransform = new Transform2d(currentPoseWRTField.getTranslation(), currentPoseWRTField.getRotation()).inverse(); // ABSOLUTELY CORRECT
-        Pose2d fieldWRTCurrentPose = new Pose2d(fieldWRTCurrentTransform.getTranslation(), fieldWRTCurrentTransform.getRotation()); // ABSOLUTELY CORRECT
-        Pose2d futurePoseWRTField = futurePoseWRTCurrentBot.relativeTo(fieldWRTCurrentPose); // ABSOLUTELY CORRECT
-        return futurePoseWRTField;
-
-    }
-
-    public Pose2d getFuturePoseWRTCurrentBot(double time) {
-        ChassisSpeeds velocityRobotWRTRobot = drivetrain.getState().Speeds;
-
-        // Calculate how much the robot will have moved into the future
-        Pose2d futurePoseWRTCurrentBot = new Pose2d(
-            new Translation2d((velocityRobotWRTRobot.vxMetersPerSecond * time), (velocityRobotWRTRobot.vyMetersPerSecond * time)),
-            new Rotation2d(velocityRobotWRTRobot.omegaRadiansPerSecond * time)); // ABSOLUTELY CORRECT
-
-        return futurePoseWRTCurrentBot;
-    }
-
-    public ZoneState getZone(Pose2d currentPose) {
-        double currentX = currentPose.getX();
-        double currentY = currentPose.getY();
-        // if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-        //     return ZoneState.SOFT_TRENCH_DEADZONE;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-        //     return ZoneState.SOFT_TRENCH_DEADZONE;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-        //     return ZoneState.SOFT_TRENCH_DEADZONE;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-        //     return ZoneState.SOFT_TRENCH_DEADZONE;
-        // }
-        if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-            return ZoneState.HARD_TRENCH_DEADZONE;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-            return ZoneState.HARD_TRENCH_DEADZONE;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-            return ZoneState.HARD_TRENCH_DEADZONE;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-            return ZoneState.HARD_TRENCH_DEADZONE;
-        }
-        return null;
-    }
-
-    /**
-     * Update which zone it's in and target it's in
-     */
-    public void updateTargetAndZone() {
-        Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
-        double currentX = currentPose.getX();
-        double currentY = currentPose.getY();
-
-        Pose2d turretPose = TurretSubsystem.getInstance().getTurretPose();
-        double turretX = turretPose.getX();
-        double turretY = turretPose.getY();
-        if(currentX > ZoneConstantsWelded.MAJOR_ZONE_X_LOW && currentX < ZoneConstantsWelded.MAJOR_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MAJOR_ZONE_Y_LOW && currentY < ZoneConstantsWelded.MAJOR_ZONE_Y_HIGH) { // CHANGE DURING COMP TO WELDED
-            currentZone = ZoneState.SHOOTING_ZONE;
-            currentTarget = ZoneTargets.SHOOTING_TARGET;
-            currentFerryZone = "Shooting";
-        }
-        
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_TOP_SECTION_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_TOP_SECTION_Y_HIGH) {
-            currentZone = ZoneState.FERRY_ZONE_TOP;
-            currentTarget = ZoneTargets.FERRY_TOP_TARGET;
-            currentFerryZone = "Normal";
-        }
-        
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_BOTTOM_SECTION_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_BOTTOM_SECTION_Y_HIGH) {
-            currentZone = ZoneState.FERRY_ZONE_BOTTOM;
-            currentTarget = ZoneTargets.FERRY_BOTTOM_TARGET;
-            currentFerryZone = "Normal";
-        }
-
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_SHOOT_OVER_V2_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_SHOOT_OVER_V2_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_V2_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_V2_Y_HIGH) {
-            currentZone = ZoneState.SHOOT_OVER_NET;
-            currentTarget = neutralTarget;
-            currentFerryZone = "Shoot Over Net";
-        }
-
-        // Comment out if dont want shoot over net
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_PUSH_V2_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_PUSH_V2_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_V2_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_V2_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = neutralTarget;
-            currentFerryZone = "Push Section V2";
-        }
-
-        // else if(currentX > ZoneConstantsWelded.MID_ZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_1_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_1_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_TOP;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.MID_ZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_2_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_2_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_BOTTOM;
-        //     currentTarget = ferryTarget;
-        // }
-        
-        // if(currentX > ZoneConstantsWelded.MID_ZONE_2_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_2_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_2_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_MID;
-        //     currentTarget = ferryTarget; // TODO: Switch back to ferryMidtarget after testing
-        // }
-        // if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(turretX > ZoneConstantsWelded.OUR_CLIMB_DEADZONE_X_LOW && turretX < ZoneConstantsWelded.OUR_CLIMB_DEADZONE_X_HIGH && turretY > ZoneConstantsWelded.CLIMB_DEADZONE_Y_LOW && turretY < ZoneConstantsWelded.CLIMB_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = ZoneTargets.SHOOTING_TARGET;
-        }
-        else if(turretX > ZoneConstantsWelded.THEIR_CLIMB_DEADZONE_X_LOW && turretX < ZoneConstantsWelded.THEIR_CLIMB_DEADZONE_X_HIGH && turretY > ZoneConstantsWelded.CLIMB_DEADZONE_Y_LOW && turretY < ZoneConstantsWelded.CLIMB_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        if(useCustomTarget) {
-            currentTarget = customTarget;
-        }
-        lastAdjustedTargetPose = currentTarget;
-    }
-
-    // public Command setUseCustomTarget(boolean value) {
-    //     return new InstantCommand(() -> useCustomTarget = value);
-    // }
-
-    public void setUseCustomTarget(boolean value) {
-        useCustomTarget = value;
-    }
-
-    public Command setUseCustomTarget() {
-        return new InstantCommand(() -> useCustomTarget = !useCustomTarget);
-    }
-
-    public Command setCustomTarget(Translation2d target) {
-        return new InstantCommand(() -> customTarget = target);
-    }
-
-    public boolean getUsingCustomTarget() {
-        return useCustomTarget;
-    }
-
-    public void setFerryTarget(String target) {
-        if(target.equals("top")) {
-            ferryingTop = true;
-            ferryTarget = ZoneTargets.FERRY_TOP_TARGET;
-            neutralTarget = ZoneTargets.NEUTRAL_TOP_TARGET;
-            ferryMidTarget = ZoneTargets.FERRY_MID_LEFT_TARGET;
-        }
-        else if(target.equals("bottom")) {
-            ferryingTop = false;
-            ferryTarget = ZoneTargets.FERRY_BOTTOM_TARGET;
-            neutralTarget = ZoneTargets.NEUTRAL_BOTTOM_TARGET;
-            ferryMidTarget = ZoneTargets.FERRY_MID_RIGHT_TARGET;
-        }
-    }
-    public void setFerryTarget(double choice) {
-        if(choice == 0) {
-            ferryTarget = ZoneTargets.FERRY_BOTTOM_TARGET;
-        }
-        else if(choice == 1) {
-            ferryTarget = ZoneTargets.FERRY_MID_RIGHT_TARGET;
-        }
-        else if(choice == 2) {
-            ferryTarget = ZoneTargets.FERRY_MID_TARGET;
-        }
-    }
-
-    public boolean inZone(ZoneState currentZone) {
-        return false;
-    }
 
     /**
      * Updates vision measurement standard deviations for fusion/filtering.
