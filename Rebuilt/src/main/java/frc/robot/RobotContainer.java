@@ -214,6 +214,20 @@ public class RobotContainer {
     //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false))
     // );
 
+    // CONTROLLER KEYBINDS ----------
+    /*
+     * Left trigger = Super charged mode (drive slow down)
+     * Right trigger = Reject
+     * A = reset IMU
+     * back = Rezero
+     * Left Bumper = Set intake & firing
+     * x = increase manual adjust (turret goes left)
+     * y = reset manual adjust
+     * b = decrease manual adjust (turret goes right)
+     * Pov up = manual hood up
+     * Pov down = manual hood down
+     */
+
     DRIVER.leftTrigger().onTrue(
         CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
         new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
