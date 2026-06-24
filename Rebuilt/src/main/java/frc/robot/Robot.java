@@ -124,6 +124,7 @@ public class Robot extends LoggedRobot {
     // SignalLogger.stop();
   }
 
+  // Update constants from logging here
   @Override
   public void disabledPeriodic() {
     if (updateValuesOffset >= 60) {
@@ -132,7 +133,7 @@ public class Robot extends LoggedRobot {
     } else if (updateValuesOffset == 45) {
       ShooterSubsystem.getInstance().updateShooterConstants();
     } else if (updateValuesOffset == 30) {
-      IntakeSubsystem.getInstance().updateConstants();
+      // Update intake's constants!
     } else if (updateValuesOffset == 15) {
       // ClimberSubsystem.getInstance().updateClimberConstants();
     }
