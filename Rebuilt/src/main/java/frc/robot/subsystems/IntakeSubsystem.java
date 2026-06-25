@@ -33,22 +33,27 @@ public final class IntakeSubsystem extends SubsystemBase{
     // These include, intaking, storing, trench_store (allows the intake to not hit the trench)
     public enum IntakePos {
         INTAKING,
-        STORING,
+        STORE,
         TRENCH_STORE,
         ZEROING,
+
+        // Not implemented
+        DEFENSE,
+        PUSH_BAR,
+        CLIMB_STORE,
     }
 
     // Different intaking states
     // Not intaking, intaking, slow intake
     public enum IntakeState {
-        NOT_INTAKING,
+        IDLING,
         INTAKING,
         SLOW_INTAKE,
     }
 
     //Set the current state of the robot to be idle
-    private IntakePos currentIntakePos = IntakePos.STORING;
-    private IntakeState currentIntakeState = IntakeState.NOT_INTAKING;
+    private IntakePos currentIntakePos = IntakePos.STORE;
+    private IntakeState currentIntakeState = IntakeState.IDLING;
 
     //Set up the arm motor, encoder and wheel motors
     // TalonFX motor = new TalonFX(motorID, canBUS)
@@ -185,13 +190,13 @@ public final class IntakeSubsystem extends SubsystemBase{
             // Zero the motor with setPosition()
             // Get out of the zeroing state
             // Set the motor voltage to 0
-        if (intakeSetpoint != 0 && Math.abs(motorArm.getVelocity().getValueAsDouble()) <= 0.1) { // Velocity might not read as 0, check for 0.1
+        if (Math.abs(motorArm.getVelocity().getValueAsDouble()) <= 0.1) { // Velocity might not read as 0, check for 0.1
             // TODO: Is <=0.1 a good value?
 
             motorArm.stopMotor();
             motorArm.setPosition(0);
 
-            currentIntakePos = IntakePos.STORING;
+            currentIntakePos = IntakePos.STORE;
             zeroingTimer.restart();
 
             return true;
@@ -226,7 +231,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
                 intakeSetpoint = intakeRevolutions;
                 break;
-            case STORING:
+            case STORE:
                 motorArm.setControl(request.withPosition(storeRevolutions).withSlot(0));
                 intakeSetpoint = storeRevolutions;
                 break;
@@ -238,12 +243,20 @@ public final class IntakeSubsystem extends SubsystemBase{
                 motorArm.setVoltage(-2);
                 isZeroingDone();
                 break;
+
+            // Not implemented
+            case CLIMB_STORE:
+                break;
+            case DEFENSE:
+                break;
+            case PUSH_BAR:
+                break;
         }
         switch (currentIntakeState) {
             case INTAKING:
                 motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts));
                 break;
-            case NOT_INTAKING:
+            case IDLING:
                 motorWheels.setControl(voltageRequest.withOutput(0));
                 break;
             case SLOW_INTAKE:
@@ -264,6 +277,10 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
 
     /* CREATE SETTERS AND GETTERS */
+    public boolean getJammed() { // Not implemented
+        return false;
+    }
+
     public IntakePos getCurrentIntakePos() {
         return currentIntakePos;
     }
