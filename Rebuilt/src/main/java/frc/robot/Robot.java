@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableBuilderImpl;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Constants.FieldConstants;
-import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.CoordinationSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LEDSubsystem;
@@ -134,6 +133,7 @@ public class Robot extends LoggedRobot {
       ShooterSubsystem.getInstance().updateShooterConstants();
     } else if (updateValuesOffset == 30) {
       // Update intake's constants!
+      IntakeSubsystem.getInstance().updateConstants();
     } else if (updateValuesOffset == 15) {
       // ClimberSubsystem.getInstance().updateClimberConstants();
     }
