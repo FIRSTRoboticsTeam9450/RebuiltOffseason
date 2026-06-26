@@ -55,6 +55,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
 
     //Set the current state of the robot to be idle
+    private IntakePos currentPos = IntakePos.STORE;
+    private IntakeState currentState = IntakeState.IDLING;
     
     //Set up the arm motor, encoder and wheel motors
     // TalonFX motor = new TalonFX(motorID, canBUS)
