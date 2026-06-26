@@ -32,22 +32,30 @@ import com.ctre.phoenix6.signals.SensorDirectionValue;
 public final class IntakeSubsystem extends SubsystemBase{
 
     // The instance! Should be in every subsystem to make sure there's only one of each
-    private static volatile IntakeSubsystem INSTACNE;
+    private static volatile IntakeSubsystem INSTANCE;
 
     //List the positions the intake will use
     // These include, intaking, storing, trench_store (allows the intake to not hit the trench)
     public enum IntakePos {
-
+        INTAKING,
+        STORE,
+        TRENCH_STORE,
+        DEFENSE,
+        PUSH_BAR,
+        CLIMB_STORE
     }
 
     // Different intaking states
     // Not intaking, intaking, slow intake
     public enum IntakeState {
-        
+        NOT_INTAKING,
+        SLOW_INTAKE,
+        INTAKING,
+        IDLING
     }
 
     //Set the current state of the robot to be idle
-
+    
     //Set up the arm motor, encoder and wheel motors
     // TalonFX motor = new TalonFX(motorID, canBUS)
     // Ex: TalonFX motorArm = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
@@ -55,6 +63,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     // Make sure you use constants!
     // The wheels use two motors, one leader, one follower
     /* Put your code here */
+
+    TalonFX motorArm = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
 
     // Motor configurater!
     TalonFXConfiguration motorConfig = new TalonFXConfiguration();
@@ -212,8 +222,8 @@ public final class IntakeSubsystem extends SubsystemBase{
 
     // Every subsystem should have one! When using the subsystem in other classes, use getInstance()
     public static synchronized IntakeSubsystem getInstance() {
-        if (INSTACNE == null) INSTACNE = new IntakeSubsystem();
-        return INSTACNE;
+        if (INSTANCE == null) INSTANCE = new IntakeSubsystem();
+        return INSTANCE;
     }
 
     // To have the tuning system actually update
