@@ -886,35 +886,6 @@ public class VisionSubsystem extends SubsystemBase {
             currentFerryZone = "Push Section V2";
         }
 
-        // else if(currentX > ZoneConstantsWelded.MID_ZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_1_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_1_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_TOP;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.MID_ZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_2_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_2_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_BOTTOM;
-        //     currentTarget = ferryTarget;
-        // }
-        
-        // if(currentX > ZoneConstantsWelded.MID_ZONE_2_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.MID_ZONE_2_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.MID_ZONE_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.MID_ZONE_2_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.FERRY_ZONE_MID;
-        //     currentTarget = ferryTarget; // TODO: Switch back to ferryMidtarget after testing
-        // }
-        // if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
-        // else if(currentX > ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.SOFT_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-        //     currentZone = ZoneState.SOFT_TRENCH_DEADZONE;
-        //     currentTarget = ferryTarget;
-        // }
         if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
             currentZone = ZoneState.HARD_TRENCH_DEADZONE;
             currentTarget = ferryTarget;
