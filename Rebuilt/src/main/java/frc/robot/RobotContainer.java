@@ -313,6 +313,9 @@ public class RobotContainer {
     /* ================ TEST ONLY KEYBINDS ============== */
     
     /* ============================== SYSID ==================================== */
+    DRIVER.a()
+      .onTrue(new InstantCommand(() -> IntakeSubsystem.getInstance().setPos(IntakePos.INTAKING)))
+      .onFalse(new InstantCommand(() -> IntakeSubsystem.getInstance().setPos(IntakePos.STORE)));
     // DRIVER.y().whileTrue(shooterSub.sysIdQuasistatic(Direction.kForward));
     // DRIVER.a().whileTrue(shooterSub.sysIdQuasistatic(Direction.kReverse));
     // DRIVER.b().whileTrue(shooterSub.sysIdDynamic(Direction.kForward));

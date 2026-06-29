@@ -22,9 +22,9 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 public class PositionAlignCommand extends Command {
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |          Fields           |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
      
@@ -59,9 +59,9 @@ public class PositionAlignCommand extends Command {
                                                                              .withDeadband(0.05);
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |       Initialization      |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
 
@@ -101,9 +101,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |      Periodical loop      |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
 
@@ -130,9 +130,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |        Calculations       |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
 
@@ -232,9 +232,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |       Swerve Request      |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */
 
 
@@ -261,9 +261,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |    Setpoint Tolerences    |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
 
@@ -276,9 +276,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ─────────────────────────── 
      *  |         Debugging         |
-     *  └───────────────────────────┘
+     *   ─────────────────────────── 
      */ 
 
     private void publishLogs() {
@@ -302,9 +302,9 @@ public class PositionAlignCommand extends Command {
     }
 
 
-    /*  ┌───────────────────────────┐
+    /*   ───────────────────────────
      *  |            End            |
-     *  └───────────────────────────┘
+     *   ───────────────────────────
      */ 
 
 
