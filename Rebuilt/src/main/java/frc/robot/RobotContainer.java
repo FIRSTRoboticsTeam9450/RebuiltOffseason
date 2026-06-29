@@ -28,6 +28,7 @@ import frc.robot.Constants.AlignPos;
 import frc.robot.commands.DriveBrakeCommand;
 import frc.robot.commands.PositionAlignCommand;
 import frc.robot.commands.ResetIMU;
+import frc.robot.commands.SetIntakePosCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -311,7 +312,10 @@ public class RobotContainer {
     OPERATOR.start().onTrue(ClimberSubsystem.getInstance().setForceClimberDownCommand());
 
     /* ================ TEST ONLY KEYBINDS ============== */
-    
+    DRIVER.start()
+      .onTrue(new SetIntakePosCommand(intakeSub, IntakePos.INTAKING))
+      .onFalse(new SetIntakePosCommand(intakeSub, IntakePos.STORE));
+
     /* ============================== SYSID ==================================== */
     // DRIVER.y().whileTrue(shooterSub.sysIdQuasistatic(Direction.kForward));
     // DRIVER.a().whileTrue(shooterSub.sysIdQuasistatic(Direction.kReverse));

@@ -24,8 +24,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 
-public final class IntakeSubsystem extends SubsystemBase{
-
+public final class IntakeSubsystem extends SubsystemBase {
     // The instance! Should be in every subsystem to make sure there's only one of each
     private static volatile IntakeSubsystem INSTANCE;
 
@@ -75,15 +74,15 @@ public final class IntakeSubsystem extends SubsystemBase{
     // /Tuning provides the path for it to be a tunable value
     /* Put your code here */
     // TODO: Real default LoggedNetworkNumber values
-    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", 0);
-    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 0);
-    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/kS", 0);
+    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity",50);
+    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 10);
+    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/kS", 0.2);
     private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Intake/Angle/kV", 0);
     private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("/Tuning/Intake/Angle/kA", 0);
-    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Intake/Angle/kP", 0);
+    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Intake/Angle/kP", 100);
     private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Intake/Angle/kI", 0);
-    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Intake/Angle/kD", 0);
-    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/kG", 0);
+    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Intake/Angle/kD", 1.5);
+    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/kG", 0.1);
 
     private LoggedNetworkNumber logIntakeTarget = new LoggedNetworkNumber("/Tuning/Intake/Angle/Intaking Target", 0.052);
     private LoggedNetworkNumber logIntakingTarget = new LoggedNetworkNumber("/Tuning/Intake/Wheels/Target", 5);
@@ -191,8 +190,6 @@ public final class IntakeSubsystem extends SubsystemBase{
             // Get out of the zeroing state
             // Set the motor voltage to 0
         if (Math.abs(motorArm.getVelocity().getValueAsDouble()) <= 0.1) { // Velocity might not read as 0, check for 0.1
-            // TODO: Is <=0.1 a good value?
-
             motorArm.stopMotor();
             motorArm.setPosition(0);
 
@@ -260,7 +257,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 motorWheels.setControl(voltageRequest.withOutput(0));
                 break;
             case SLOW_INTAKE:
-                motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts / 2)); // TODO: Make sure this is a good slow intake speed
+                motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts / 2));
                 break;
         }
     }
@@ -271,9 +268,9 @@ public final class IntakeSubsystem extends SubsystemBase{
         // The path is "Rebuilt/Intake", each / creates a new subsection so it allows for better organization
         // EX: Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", currentPos);
         Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos State", currentIntakePos);
-        Logger.recordOutput("Rebuilt/Intake/Angle/Current Setpoint", intakeSetpoint);
         Logger.recordOutput("Rebuilt/Intake/Current State", currentIntakeState);
-        Logger.recordOutput("Rebuilt/Intake/Zeroing Timer", zeroingTimer.get());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Current Setpoint", intakeSetpoint);
+        Logger.recordOutput("Rebuilt/Intake/Angle/Current Angle", encoderArm.getPosition().getValueAsDouble());
     }
 
     /* CREATE SETTERS AND GETTERS */
