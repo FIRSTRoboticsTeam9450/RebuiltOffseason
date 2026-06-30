@@ -235,7 +235,7 @@ public class CoordinationSubsystem extends SubsystemBase {
         ShooterState shooterVelocState = ShooterState.NOT_SHOOTING;
         AngleState shooterHoodState = AngleState.DISABLED;
         TransferState transferState = TransferState.NO_RUN;
-        IntakePos intakeAngleState = IntakePos.STORE;
+        IntakePos intakeAngleState = IntakePos.INTAKE_IN;
         IntakeState intakeVelocState = IntakeState.IDLING;
         LEDState ledState = LEDSubsystem.getInstance().getCurrentState();
 
@@ -243,20 +243,20 @@ public class CoordinationSubsystem extends SubsystemBase {
             case INIT:
                 turretState = TurretState.AIMING;
                 shooterHoodState = AngleState.ZEROING;
-                intakeAngleState = IntakePos.STORE;
+                intakeAngleState = IntakePos.INTAKE_IN;
                 intakeVelocState = IntakeState.IDLING;
                 ledState = LEDState.INIT;
                 break;
             case EMERGENCY:
                 turretState = TurretState.EMERGENCY;
-                intakeAngleState = IntakePos.TRENCH_STORE;
+                intakeAngleState = IntakePos.INTAKE_IN;
                 intakeVelocState = IntakeState.IDLING;
                 shooterVelocState = ShooterState.NOT_SHOOTING;
                 break;
 
             case DEFENSE:
                 turretState = TurretState.EMERGENCY;
-                intakeAngleState = IntakePos.DEFENSE;
+                intakeAngleState = IntakePos.INTAKE_IN;
                 intakeVelocState = IntakeState.IDLING;
                 shooterVelocState = ShooterState.NOT_SHOOTING;
                 shooterHoodState = AngleState.STORING;
@@ -267,13 +267,13 @@ public class CoordinationSubsystem extends SubsystemBase {
                 turretState = TurretState.STORING;
                 shooterHoodState = AngleState.STORING;
                 if (shouldBeIntaking) {
-                    intakeAngleState = IntakePos.INTAKING;
+                    intakeAngleState = IntakePos.INTAKE_OUT;
                     intakeVelocState = IntakeState.INTAKING;
                 } else if (intakePushing) {
-                    intakeAngleState = IntakePos.PUSH_BAR;
+                    intakeAngleState = IntakePos.INTAKE_IN;
                     intakeVelocState = IntakeState.IDLING;
                 } else {
-                    intakeAngleState = IntakePos.STORE;
+                    intakeAngleState = IntakePos.INTAKE_IN;
                     intakeVelocState = IntakeState.IDLING;
                 }
                 break;
@@ -285,18 +285,18 @@ public class CoordinationSubsystem extends SubsystemBase {
                 if (!rejecting && !autoRejecting) {
                     transferState = TransferState.HOLD;
                     if (shouldBeIntaking) {
-                        intakeAngleState = IntakePos.INTAKING;
+                        intakeAngleState = IntakePos.INTAKE_OUT;
                         intakeVelocState = IntakeState.INTAKING;
                     } else if (intakePushing) {
-                        intakeAngleState = IntakePos.PUSH_BAR;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     } else {
-                        intakeAngleState = IntakePos.STORE;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     }
                 } else {
                     transferState = TransferState.RUN_OUT;
-                    intakeAngleState = IntakePos.STORE;
+                    intakeAngleState = IntakePos.INTAKE_IN;
                     intakeVelocState = IntakeState.IDLING;
                 }
                 break;
@@ -312,18 +312,18 @@ public class CoordinationSubsystem extends SubsystemBase {
                         transferState = TransferState.FAST_RUN_IN;
                     }
                     if (shouldBeIntaking) {
-                        intakeAngleState = IntakePos.INTAKING;
+                        intakeAngleState = IntakePos.INTAKE_OUT;
                         intakeVelocState = IntakeState.INTAKING;
                     } else if (intakePushing) {
-                        intakeAngleState = IntakePos.PUSH_BAR;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     } else {
-                        intakeAngleState = IntakePos.STORE;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     }
                 } else {
                     transferState = TransferState.RUN_OUT;
-                    intakeAngleState = IntakePos.STORE;
+                    intakeAngleState = IntakePos.INTAKE_IN;
                     intakeVelocState = IntakeState.IDLING;
                 }
                 break;
@@ -340,18 +340,18 @@ public class CoordinationSubsystem extends SubsystemBase {
                 // }
                 if (!rejecting && !autoRejecting) {
                     if (shouldBeIntaking) {
-                        intakeAngleState = IntakePos.INTAKING;
+                        intakeAngleState = IntakePos.INTAKE_OUT;
                         intakeVelocState = IntakeState.INTAKING;
                     } else if (intakePushing) {
-                        intakeAngleState = IntakePos.PUSH_BAR;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     } else {
-                        intakeAngleState = IntakePos.TRENCH_STORE;
+                        intakeAngleState = IntakePos.INTAKE_IN;
                         intakeVelocState = IntakeState.IDLING;
                     }
                 } else {
                     transferState = TransferState.RUN_OUT;
-                    intakeAngleState = IntakePos.TRENCH_STORE;
+                    intakeAngleState = IntakePos.INTAKE_IN;
                     intakeVelocState = IntakeState.IDLING;
                 }
                 ledState = LEDState.SHOOTING_DEADZONE;
@@ -362,7 +362,7 @@ public class CoordinationSubsystem extends SubsystemBase {
                 shooterVelocState = ShooterState.NOT_SHOOTING;
                 transferState = TransferState.NO_RUN;
                 
-                intakeAngleState = IntakePos.CLIMB_STORE;
+                intakeAngleState = IntakePos.INTAKE_IN;
                 intakeVelocState = IntakeState.IDLING;
                 ledState = LEDState.SHOOTING_DEADZONE;
                 break;

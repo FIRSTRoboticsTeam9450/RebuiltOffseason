@@ -104,7 +104,12 @@ public final class Constants {
     public static final class TransferConstants {
 
       public static final class DeviceIDs {
-        public static final int kDrivingMotorID = 25;
+        
+        public static final int kTowerMotorID = 25;
+        public static final int kVerticalRollerMotorID = -1;
+        public static final int kHorizontalRollerMotorID = -1;
+        public static final int kTopSideSweeperMotorID = -1;
+        public static final int kBottomSideSweeperMotorID = -1;
       }
 
     }

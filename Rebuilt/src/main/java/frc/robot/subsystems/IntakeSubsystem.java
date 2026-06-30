@@ -31,18 +31,14 @@ import com.ctre.phoenix6.signals.SensorDirectionValue;
 
 public final class IntakeSubsystem extends SubsystemBase{
 
-    private static volatile IntakeSubsystem INSTACNE;
+    private static volatile IntakeSubsystem INSTANCE;
 
     //List the states the intake will use
+    // Find good value for push intake
     public enum IntakePos {
-        HOLD_ON_FOR_TRENCH,
-        ZEROING,
-        PUSH_BAR,
-        STORE,
-        CLIMB_STORE,
-        TRENCH_STORE,
-        DEFENSE,
-        INTAKING
+        INTAKE_OUT,
+        INTAKE_IN,
+        ZEROING
     }
 
     public enum IntakeState {
@@ -52,22 +48,18 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
 
     //Set the current state of the robot to be idle
-    private IntakePos currentPos = IntakePos.STORE;
+    private IntakePos currentPos = IntakePos.ZEROING;
     private IntakeState currentState = IntakeState.IDLING;
 
     private Timer zeroingTimer = new Timer();
     
     //Set up motors
-    TalonFX motorArm = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    CANcoder encoderArm = new CANcoder(IntakeConstants.DeviceIDs.kAngleEncoderID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    TalonFX motorExpander = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
     TalonFX motorWheels = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    TalonFX motorWheelsFollower = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorIDFollower, RobotConstants.MAIN_SYSTEMS_CANBUS);
-
     TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
     private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", 30); //95
     private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 45); //120
-
 
     private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/kS", 0.275); // .145
     private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Intake/Angle/kV", 0.0); // .2
@@ -82,18 +74,14 @@ public final class IntakeSubsystem extends SubsystemBase{
 
     private double intakingTargetVolts = logIntakingTarget.get();
     
-    private double intakeRevolutions = logIntakeTarget.get();
-    private double storeRevolutions = 0.385;
-    private double trenchStoreRevolutions = 0.21527;
-    private double climbStoreRevolutions = 0.39;
-    private double pushingRevolutions = 0.005;
+    private double intakeInRevolutions = 0;
+    private double intakeOutRevolutions = 0;
 
     private double intakeSetpoint = 0;
 
     //Motion Magic Set Up(Intake arm)
     private MotionMagicVoltage request = new MotionMagicVoltage(0).withEnableFOC(RobotConstants.ENABLE_FOC);
     private VoltageOut voltageRequest = new VoltageOut(0).withEnableFOC(RobotConstants.ENABLE_FOC);
-    private TorqueCurrentFOC zeroRequest = new TorqueCurrentFOC(0);
 
     private boolean isZeroingDone = false;
 
@@ -105,17 +93,7 @@ public final class IntakeSubsystem extends SubsystemBase{
     private boolean fastIntaking = false;
 
     public IntakeSubsystem() {
-        configureEncoder();
         configureMotors();
-    }
-
-    private void configureEncoder() {
-        CANcoderConfiguration config = new CANcoderConfiguration();
-        config.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
-        config.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.75;
-        config.MagnetSensor.MagnetOffset = IntakeConstants.kAngleEncoderMagnetOffset;
-
-        encoderArm.getConfigurator().apply(config);
     }
 
     private void configureMotors() {
@@ -152,12 +130,7 @@ public final class IntakeSubsystem extends SubsystemBase{
         // slot1Configs.kG = logMMKG.get();
         // slot1Configs.GravityType = GravityTypeValue.Arm_Cosine;
 
-        motorConfig.Feedback.FeedbackRemoteSensorID = encoderArm.getDeviceID();
-        motorConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-        motorConfig.Feedback.RotorToSensorRatio = IntakeConstants.kAngleRotorToSensorRatio;
-        motorConfig.Feedback.FeedbackRotorOffset = 0;
-
-        motorArm.getConfigurator().apply(motorConfig);
+        motorExpander.getConfigurator().apply(motorConfig);
 
         //Configure intake motors
         TalonFXConfiguration IntakeConfig = new TalonFXConfiguration();
@@ -169,21 +142,15 @@ public final class IntakeSubsystem extends SubsystemBase{
         IntakeConfig.CurrentLimits.SupplyCurrentLimit = 80; //60
         IntakeConfig.CurrentLimits.SupplyCurrentLowerLimit = 40;
         
-
-        
         motorWheels.getConfigurator().apply(IntakeConfig);
-        motorWheelsFollower.getConfigurator().apply(IntakeConfig);
-
-        motorWheelsFollower.setControl(new StrictFollower(motorWheels.getDeviceID()));
         // motorWheelsFollower.stopMotor();
     }
 
     public boolean isZeroingDone() {
-        
-        if(zeroingTimer.get() > 0.5 && Math.abs(motorArm.getVelocity().getValueAsDouble()) < .05 && Math.abs(motorArm.getMotorVoltage().getValueAsDouble()) > 0.2) {
-            motorArm.setPosition(0);
-            motorArm.stopMotor();
-            currentPos = IntakePos.STORE;
+        if(zeroingTimer.get() > 0.5 && Math.abs(motorExpander.getVelocity().getValueAsDouble()) < .05 && Math.abs(motorExpander.getMotorVoltage().getValueAsDouble()) > 0.2) {
+            motorExpander.setPosition(0);
+            motorExpander.stopMotor();
+            currentPos = IntakePos.INTAKE_IN;
             zeroingTimer.restart();
             return true;
         }
@@ -192,62 +159,33 @@ public final class IntakeSubsystem extends SubsystemBase{
 
     @Override
     public void periodic() {
-        // if(currentPos != IntakePos.HOLD_ON_FOR_TRENCH && !isZeroingDone) {
-        //     currentPos = IntakePos.ZEROING;
-        //     isZeroingDone = isZeroingDone();
-        // }
+        if(!isZeroingDone) {
+            currentPos = IntakePos.ZEROING;
+            isZeroingDone = isZeroingDone();
+        }
         applyState();
         publishLogs();
     }
 
     private void applyState() {
         switch (currentPos) {
-            case HOLD_ON_FOR_TRENCH:
-                motorArm.stopMotor();
-                break;
-
             case ZEROING:
-                // motorArm.setControl(zeroRequest.withOutput(-5));
-                // motorArm.setVoltage(-5);
-                motorArm.setVoltage(-2.5);
+                motorExpander.setVoltage(-2.5);
 
                 break;
-
-            case PUSH_BAR:
-                motorArm.setControl(request.withPosition(pushingRevolutions).withSlot(0));
-                intakeSetpoint = pushingRevolutions;
+            case INTAKE_IN:
+                motorExpander.setControl(request.withPosition(intakeInRevolutions).withSlot(0));
+                intakeSetpoint = intakeInRevolutions;
                 break;
 
-            case TRENCH_STORE:
-                motorArm.setControl(request.withPosition(trenchStoreRevolutions).withSlot(0));
-                intakeSetpoint = trenchStoreRevolutions;
-                break;
-
-            case STORE:
-                motorArm.setControl(request.withPosition(storeRevolutions).withSlot(0));
-                intakeSetpoint = storeRevolutions;
-                break;
-
-            case CLIMB_STORE:
-                motorArm.setControl(request.withPosition(climbStoreRevolutions).withSlot(0));
-                intakeSetpoint = climbStoreRevolutions;
-                break;
-
-            case DEFENSE:
-                if(TurretSubsystem.getInstance().isAtProfiledGoal()) {
-                    motorArm.setControl(request.withPosition(.511));
-                }
-
-                break;
-
-            case INTAKING:
-                motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
-                intakeSetpoint = intakeRevolutions;
+            case INTAKE_OUT:
+                motorExpander.setControl(request.withPosition(intakeOutRevolutions).withSlot(0));
+                intakeSetpoint = intakeOutRevolutions;
                 break;
 
             default:
-                motorArm.setControl(request.withPosition(storeRevolutions).withSlot(0));
-                intakeSetpoint = storeRevolutions;
+                motorExpander.setControl(request.withPosition(intakeInRevolutions).withSlot(0));
+                intakeSetpoint = intakeInRevolutions;
                 break;
         }
 
@@ -270,7 +208,6 @@ public final class IntakeSubsystem extends SubsystemBase{
                 }
                 else {
                     motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts));
-
                 }
                 
                 break;
@@ -280,33 +217,29 @@ public final class IntakeSubsystem extends SubsystemBase{
     private void publishLogs() {
         Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", currentPos);
 
-        Logger.recordOutput("Rebuilt/Intake/Angle/Position", motorArm.getPosition().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Intake/Angle/Target", currentPos == IntakePos.INTAKING ? logIntakeTarget.get() : storeRevolutions);
+        Logger.recordOutput("Rebuilt/Intake/Angle/Position", motorExpander.getPosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Target", currentPos == IntakePos.INTAKE_OUT ? logIntakeTarget.get() : intakeInRevolutions);
         // Logger.recordOutput("Rebuilt/Intake/Angle/Motor Voltage", motorArm.getMotorVoltage().getValueAsDouble());
         // Logger.recordOutput("Rebuilt/Intake/Angle/Motor Velocity", motorArm.getVelocity().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Intake/Angle/Is Zeroing", isZeroingDone);
         // Logger.recordOutput("Rebuilt/Intake/Angle/Zeroing Timer", zeroingTimer.get());
-        Logger.recordOutput("Rebuilt/Intake/Angle/Supply Amp Pull", motorArm.getSupplyCurrent().getValueAsDouble());
-
-        Logger.recordOutput("Rebuilt/Intake/Angle/Encoder Absolute Pos", encoderArm.getAbsolutePosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Supply Amp Pull", motorExpander.getSupplyCurrent().getValueAsDouble());
 
         // Logger.recordOutput("Rebuilt/Intake/Wheels/Lead Motor Veloc", motorWheels.getVelocity().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Intake/Wheels/Lead Motor Voltage", motorWheels.getMotorVoltage().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Intake/Wheels/Lead Motor Supply Amp Pull", motorWheels.getSupplyCurrent().getValueAsDouble());
         // Logger.recordOutput("Rebuilt/Intake/Wheels/Follower Motor Veloc", motorWheelsFollower.getVelocity().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Intake/Wheels/Follower Motor Voltage", motorWheelsFollower.getMotorVoltage().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Intake/Wheels/Follower Motor Supply Amp Pull", motorWheelsFollower.getSupplyCurrent().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Intake/Angle/Temp", motorArm.getDeviceTemp().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Temp", motorExpander.getDeviceTemp().getValueAsDouble());
         
         Logger.recordOutput("Rebuilt/Intake/Intake Jammed", jammed);
     }
 
     public void checkJammed() {
-        if(!reachedSetpoint && Math.abs(intakeSetpoint - motorArm.getPosition().getValueAsDouble()) < .1) {
+        if(!reachedSetpoint && Math.abs(intakeSetpoint - motorExpander.getPosition().getValueAsDouble()) < .1) {
             reachedSetpoint = true;
         }
-        if(currentPos == IntakePos.INTAKING && reachedSetpoint) {
-            if(Math.abs(intakeSetpoint - motorArm.getPosition().getValueAsDouble()) > 2) {
+        if(currentPos == IntakePos.INTAKE_OUT && reachedSetpoint) {
+            if(Math.abs(intakeSetpoint - motorExpander.getPosition().getValueAsDouble()) > 2) {
                 jamCount++;
             }
             else {
@@ -317,7 +250,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 jammed = true;
             }
         }
-        else if(!reachedSetpoint && Math.abs(motorArm.getVelocity().getValueAsDouble()) < .05 && Math.abs(motorArm.getMotorVoltage().getValueAsDouble()) > 3) {
+        else if(!reachedSetpoint && Math.abs(motorExpander.getVelocity().getValueAsDouble()) < .05 && Math.abs(motorExpander.getMotorVoltage().getValueAsDouble()) > 3) {
             jammed = true;
         }
         else {
@@ -338,16 +271,6 @@ public final class IntakeSubsystem extends SubsystemBase{
             isZeroingDone = false;
             zeroingTimer.restart();
         }
-        if(pos == IntakePos.DEFENSE) { // TODO: FIND A GOOD VALUE 
-            motorConfig.MotionMagic.MotionMagicAcceleration = 20;
-            motorConfig.MotionMagic.MotionMagicCruiseVelocity = 10;
-            motorArm.getConfigurator().apply(motorConfig);
-        }
-        if(pos != IntakePos.DEFENSE && currentPos == IntakePos.DEFENSE) {
-            motorConfig.MotionMagic.MotionMagicAcceleration = logMMAccel.get();
-            motorConfig.MotionMagic.MotionMagicCruiseVelocity = logMMVeloc.get();
-            motorArm.getConfigurator().apply(motorConfig);
-        }
         reachedSetpoint = false;
         currentPos = pos;
     }
@@ -361,8 +284,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
 
     public static synchronized IntakeSubsystem getInstance() {
-        if (INSTACNE == null) INSTACNE = new IntakeSubsystem();
-        return INSTACNE;
+        if (INSTANCE == null) INSTANCE = new IntakeSubsystem();
+        return INSTANCE;
     }
 
     public void updateConstants() {
@@ -386,7 +309,7 @@ public final class IntakeSubsystem extends SubsystemBase{
             configureMotors();
         }
 
-        intakeRevolutions = logIntakeTarget.get();
+        intakeOutRevolutions = logIntakeTarget.get();
         intakingTargetVolts = logIntakingTarget.get();
     }
 
@@ -395,15 +318,14 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
     public void zeroEncoders() {
         if (DriverStation.isDisabled()) {
-            motorArm.setPosition(0);
+            motorExpander.setPosition(0);
         }
     }
 
     public ArrayList<TalonFX> getMotors() {
         ArrayList<TalonFX> arrList = new ArrayList<>();
-        arrList.add(motorArm);
+        arrList.add(motorExpander);
         arrList.add(motorWheels);
-        arrList.add(motorWheelsFollower);
         return arrList;
     }
 }
