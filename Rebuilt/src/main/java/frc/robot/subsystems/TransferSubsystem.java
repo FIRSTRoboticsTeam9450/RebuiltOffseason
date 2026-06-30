@@ -28,18 +28,14 @@ public class TransferSubsystem extends SubsystemBase {
     /**
      * State machine for transfer operation modes
      */
+    // States include: not running, running out, running in, fast run in, holding
     public enum TransferState {
-        HOLD,
-        RUN_IN,
-        SLOW_RUN_IN,
-        FAST_RUN_IN,
-        RUN_OUT,
-        NO_RUN
     }
-    private TransferState currentState = TransferState.NO_RUN;
-    private TransferState previousState = currentState;
+    
+    // Record you current state
 
-    private final TalonFX motor = new TalonFX(TransferConstants.DeviceIDs.kDrivingMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    // One motor! ID: 25, on the main canbus
+    
 
     /** Voltage request */
     private VoltageOut voltageRequest = new VoltageOut(0.0).withEnableFOC(RobotConstants.ENABLE_FOC);
@@ -60,11 +56,9 @@ public class TransferSubsystem extends SubsystemBase {
      * @return The TurretSubsystem instance
      */
     public static synchronized TransferSubsystem getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new TransferSubsystem();
-            INSTANCE.initialize();
-        }
-        return INSTANCE;
+        // Check if there's already an instance if so, return that instance
+        // If there isn't, create a new instance
+        return null; // <- Replace this!
     }
 
     private void initialize() {
@@ -75,19 +69,10 @@ public class TransferSubsystem extends SubsystemBase {
      * Configures the TalonFX motor
      */
     private void configureMotor() {
-        TalonFXConfiguration motorConfig = new TalonFXConfiguration();
+        // Coast
+        // Clockwise Positive
+        // Stator current limit = 80, Supply currrent limit = 50
 
-        motorConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        motorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-
-        motorConfig.CurrentLimits.StatorCurrentLimitEnable = false;
-        motorConfig.CurrentLimits.StatorCurrentLimit = 80;
-        motorConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        motorConfig.CurrentLimits.SupplyCurrentLimit = 50;
-        motorConfig.CurrentLimits.SupplyCurrentLowerTime = 1;
-        motorConfig.CurrentLimits.SupplyCurrentLowerLimit = 30;
-        
-        motor.getConfigurator().apply(motorConfig);
     }
 
     /**
@@ -95,7 +80,6 @@ public class TransferSubsystem extends SubsystemBase {
      */
     @Override
     public void periodic() {
-        checkStall();
         applyState();
         publishLogs();
     }
@@ -105,105 +89,23 @@ public class TransferSubsystem extends SubsystemBase {
      */
     private void applyState() {
         // Set request voltage
-        switch (currentState) {
-            case HOLD: // Very slowly move fuel in
-                voltageRequest.Output = 0.55;
-                break;
-
-            case RUN_IN: // Move fuel in
-                // if (stateTimer.get() > 0.25) {
-                //     if (Math.abs(motor.getVelocity().getValueAsDouble()) > 10) {
-                //         voltageRequest.Output = 12;
-                //     } else {
-                //         voltageRequest.Output = -12;
-                //     }
-                // } else {
-                    voltageRequest.Output = 8;
-                // }
-                break;
-            
-            case SLOW_RUN_IN:
-                voltageRequest.Output = 4.5;
-                break;
-            case FAST_RUN_IN:
-                voltageRequest.Output = 12;
-                break;
-            case RUN_OUT: // Move fuel out
-                double voltage = -12 / (stateTimer.get() * 1.23);
-                voltage = MathUtil.clamp(voltage, -12, -4);
-                voltageRequest.Output = voltage;
-
-                break;
-            
-            case NO_RUN: // Don't move
-                voltageRequest.Output = 0;
-                break;
-        }
-        motor.setControl(voltageRequest);
-    }
-
-    public void checkStall() {
-        if(currentState == TransferState.SLOW_RUN_IN || currentState == TransferState.RUN_IN ) {
-            if(Math.abs(voltageRequest.Output) > 4 && Math.abs(motor.getVelocity().getValueAsDouble()) < 1) {
-                jammedCount++;
-            }
-            else {
-                jammedCount = 0;
-            }
-        }
-        else {
-            jammedCount = 0;
-        }
-    }
-
-    public boolean jammed() {
-        if(jammedCount > 50) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        // Depending on the state, you will want different voltages
+        // For example, HOLD just wants to hold the fuel in so a very small voltage would work
+        // To set the output of the voltagerequest: .output = 
+        // Set the control to be the voltage request
     }
 
 
-    /**
-     * Changes the current state of the transfer
-     * @param wantedState The desired state to transition to
-     */
-    public void setState(TransferState wantedState) {
-        stateTimer.restart();
-        previousState = currentState;
-        currentState = wantedState;
-    }
 
-    /**
-     * Get a command that sets the current state of the transfer
-     * @param wantedState The desired state to transition to
-     */
-    public Command setStateCommand(TransferState wantedState) {
-        return new InstantCommand(() -> setState(wantedState));
-    }
+    // Set state methods:
 
     /**
      * Publishes telemetry data to AdvantageKit Logger
      */
     private void publishLogs() {
-        Logger.recordOutput("Rebuilt/Transfer/Current State", currentState);
-        // Logger.recordOutput("Rebuilt/Transfer/Previous State", previousState);
-
-        // Logger.recordOutput("Rebuilt/Transfer/Target Speed", voltageRequest.Output);
-
-        // Logger.recordOutput("Rebuilt/Transfer/Stalling", jammed());
-
-        Logger.recordOutput("Rebuilt/Transfer/Motor Voltage", motor.getMotorVoltage().getValueAsDouble());
-        // Logger.recordOutput("Rebuilt/Transfer/Motor Veloc", motor.getVelocity().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Transfer/Motor Supply Amps", motor.getSupplyCurrent().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Transfer/Motor Stator Amps", motor.getTorqueCurrent().getValueAsDouble());
-
-        Logger.recordOutput("Rebuilt/Transfer/Transfer Jammed", jammed());
     }
 
     public TalonFX getMotor() {
-        return motor;
+        return null;
     }
 }
