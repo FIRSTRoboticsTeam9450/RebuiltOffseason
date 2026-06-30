@@ -848,72 +848,21 @@ public class VisionSubsystem extends SubsystemBase {
      * Update which zone it's in and target it's in
      */
     public void updateTargetAndZone() {
+        // Get the current robot position
+        // Because we dont want have to have the same zones depending on red and blue alliances
+        // We want to get the pose when its alliance unspecific
+        // This allows us to not have to mirror any zones
         Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
         double currentX = currentPose.getX();
         double currentY = currentPose.getY();
 
-        Pose2d turretPose = TurretSubsystem.getInstance().getTurretPose();
-        double turretX = turretPose.getX();
-        double turretY = turretPose.getY();
-        if(currentX > ZoneConstantsWelded.MAJOR_ZONE_X_LOW && currentX < ZoneConstantsWelded.MAJOR_ZONE_X_HIGH && currentY > ZoneConstantsWelded.MAJOR_ZONE_Y_LOW && currentY < ZoneConstantsWelded.MAJOR_ZONE_Y_HIGH) { // CHANGE DURING COMP TO WELDED
-            currentZone = ZoneState.SHOOTING_ZONE;
-            currentTarget = ZoneTargets.SHOOTING_TARGET;
-            currentFerryZone = "Shooting";
-        }
-        
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_TOP_SECTION_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_TOP_SECTION_Y_HIGH) {
-            currentZone = ZoneState.FERRY_ZONE_TOP;
-            currentTarget = ZoneTargets.FERRY_TOP_TARGET;
-            currentFerryZone = "Normal";
-        }
-        
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_NORMAL_SECTION_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_BOTTOM_SECTION_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_BOTTOM_SECTION_Y_HIGH) {
-            currentZone = ZoneState.FERRY_ZONE_BOTTOM;
-            currentTarget = ZoneTargets.FERRY_BOTTOM_TARGET;
-            currentFerryZone = "Normal";
-        }
+        // The zones we want are the shooting zone, 2 sides of ferrying, all the trenches, climb deadzone
+        // Ferrying back deadzone
+        // Path planner is a great way to get coordinates for your zone ranges
+        // Having overlap is also ok as long as you make your checks layer properly
+        // Id recommend having your points be in constants because if you need to change a zone
+        // it'll make everything easier
 
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_SHOOT_OVER_V2_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_SHOOT_OVER_V2_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_V2_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_V2_Y_HIGH) {
-            currentZone = ZoneState.SHOOT_OVER_NET;
-            currentTarget = neutralTarget;
-            currentFerryZone = "Shoot Over Net";
-        }
-
-        // Comment out if dont want shoot over net
-        if(currentX > ZoneConstantsWelded.FERRY_ZONE_PUSH_V2_X_LOW && currentX < ZoneConstantsWelded.FERRY_ZONE_PUSH_V2_X_HIGH && currentY > ZoneConstantsWelded.FERRY_ZONE_V2_Y_LOW && currentY < ZoneConstantsWelded.FERRY_ZONE_V2_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = neutralTarget;
-            currentFerryZone = "Push Section V2";
-        }
-
-        if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_1_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_12_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_2_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_3_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(currentX > ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_LOW && currentX < ZoneConstantsWelded.HARD_TRENCH_34_DEADZONE_X_HIGH && currentY > ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_LOW && currentY < ZoneConstantsWelded.TRENCH_4_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.HARD_TRENCH_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        else if(turretX > ZoneConstantsWelded.OUR_CLIMB_DEADZONE_X_LOW && turretX < ZoneConstantsWelded.OUR_CLIMB_DEADZONE_X_HIGH && turretY > ZoneConstantsWelded.CLIMB_DEADZONE_Y_LOW && turretY < ZoneConstantsWelded.CLIMB_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = ZoneTargets.SHOOTING_TARGET;
-        }
-        else if(turretX > ZoneConstantsWelded.THEIR_CLIMB_DEADZONE_X_LOW && turretX < ZoneConstantsWelded.THEIR_CLIMB_DEADZONE_X_HIGH && turretY > ZoneConstantsWelded.CLIMB_DEADZONE_Y_LOW && turretY < ZoneConstantsWelded.CLIMB_DEADZONE_Y_HIGH) {
-            currentZone = ZoneState.CLIMB_DEADZONE;
-            currentTarget = ferryTarget;
-        }
-        if(useCustomTarget) {
-            currentTarget = customTarget;
-        }
-        lastAdjustedTargetPose = currentTarget;
     }
 
     // public Command setUseCustomTarget(boolean value) {
