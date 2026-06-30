@@ -129,7 +129,7 @@ public class VisionSubsystem extends SubsystemBase {
     private String currentFerryZone = "none";
 
 
-    // Targeting Data
+    // Zoning Data
     public enum ZoneState {
         SHOOTING_ZONE,
         FERRY_ZONE_TOP,
@@ -142,6 +142,7 @@ public class VisionSubsystem extends SubsystemBase {
         SHOOT_OVER_NET
     }
     
+    // Targets
     ZoneState currentZone = ZoneState.SHOOTING_ZONE;
     Translation2d currentTarget = ZoneTargets.SHOOTING_TARGET;
     Translation2d ferryTarget = ZoneTargets.FERRY_TOP_TARGET;
@@ -645,11 +646,9 @@ public class VisionSubsystem extends SubsystemBase {
 
         if(DriverStation.getAlliance().toString().equals("Optional[Red]")){
             alliancePose = new Pose2d(ZoneConstantsWelded.RED_CORNER, new Rotation2d(Math.PI));
-            // Pose2d newBotPose = currentBluePose.plus(redCornerPose);
-            // Transform2d calculated = redCorner.minus(currentBluePose);
-            // return new Pose2d(calculated.getTranslation(), calculated.getRotation());
-            
         }
+        
+        // Relative to transforms the pose to be distance from a specific point as the orgin (alliance pose)
         return currentBluePose.relativeTo(alliancePose).transformBy(TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT);
         
     }
@@ -657,9 +656,13 @@ public class VisionSubsystem extends SubsystemBase {
     public Translation2d getTargetRelativeToBot () {
         Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
         Pose2d currentTargetPose = new Pose2d(currentTarget, new Rotation2d());
+
+        // Gives how far the target is away from the robot, thus gives distance away target is
+        // from the robot
         return currentTargetPose.minus(currentPose).getTranslation();
     }
 
+    /** Get the field relative velocuty of the robot*/ 
     public ChassisSpeeds getVelocityOfBot() {
         ChassisSpeeds speeds = drivetrain.getState().Speeds;
         Pose2d currentPose = getCurrentBotPoseAllianceUnspecific();
@@ -674,6 +677,10 @@ public class VisionSubsystem extends SubsystemBase {
         return currentTarget;
     }
     
+    /**
+     * Calls getAdjustedTarget() on the current target
+     * @return An adjusted current target that accounts for added robot velocity
+     */
     public Translation2d getAdjustedCurrentTarget() {
         lastAdjustedTargetPose = getAdjustedTarget(getTargetRelativeToBot(), lastAdjustedTargetPose);
         return lastAdjustedTargetPose;
@@ -684,10 +691,10 @@ public class VisionSubsystem extends SubsystemBase {
      */
     public Translation2d getAdjustedTarget(Translation2d givenTargetWRTBot, Translation2d lastTargetPose) {
         Translation2d targetWRTBot = givenTargetWRTBot;
-        // ChassisSpeeds velocityRobotWRTRobot = drivetrain.getState().Speeds;
         ChassisSpeeds velocityRobotWRTRobot = ChassisSpeeds.fromFieldRelativeSpeeds(getVelocityOfTurret(), getCurrentBotPoseAllianceUnspecific().getRotation());
     
-
+        // Get the time the ball will be in the air
+        // This is the amount of time the instantanous velocity of the robot will affect the ball
         double timeToShoot = getTimeToShoot(targetWRTBot);
         if(lastTargetPose != null) {
             timeToShoot = getTimeToShoot(lastTargetPose);
@@ -695,6 +702,8 @@ public class VisionSubsystem extends SubsystemBase {
 
         // Calculate the amount the ball moved due to robot velocity in the time it takes for the ball to land in the target
         Translation2d amountMoved = new Translation2d(velocityRobotWRTRobot.vxMetersPerSecond * timeToShoot, velocityRobotWRTRobot.vyMetersPerSecond * timeToShoot);
+        // It's opposite because we're offsetting where the extra added movement of the robot added to the ball so that rather than
+        // landing far away, it'll land perfectly in the target
         Translation2d finalTarget = targetWRTBot.plus(amountMoved.times(-1));
 
         // Iterate to zoom in to find the final target, get closer and closer each time
@@ -707,22 +716,19 @@ public class VisionSubsystem extends SubsystemBase {
         return finalTarget;
     }
 
+    /**
+     * Accounts for the turret not being centered
+     * Finds the additional x,y movement the turret has due to rotation
+     * @return
+     */
     public ChassisSpeeds getVelocityOfTurret() { // jump point
         ChassisSpeeds velocityRobotWRTRobot = drivetrain.getState().Speeds;
         ChassisSpeeds velocityRobotWRTField = ChassisSpeeds.fromRobotRelativeSpeeds(velocityRobotWRTRobot, getCurrentBotPoseAllianceUnspecific().getRotation());
-        // new ChassisSpeeds(RobotContainer.slowMode ? RobotContainer.driveXAccelLimiter.calculate(-RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed) : -RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed, 
-        //             RobotContainer.slowMode ? RobotContainer.driveYAccelLimiter.calculate(-RobotContainer.driveBezier.getOutput(DRIVER.getLeftX())) : (-RobotContainer.driveBezier.getOutput(DRIVER.getLeftX()) * RobotContainer.maxSpeed), // Drive left with negative X (left)
-        //             RobotContainer.slowMode ? RobotContainer.rotationAccelLimiter.calculate(-RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate) : -RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate);
-        
-        //new ChassisSpeeds(
-        //     -RobotContainer.driveBezier.getOutput(DRIVER.getLeftY())  * RobotContainer.maxSpeed, 
-        //     -RobotContainer.driveBezier.getOutput(DRIVER.getLeftX()) * RobotContainer.maxSpeed, 
-        //     -RobotContainer.rotateBezier.getOutput(DRIVER.getRightX()) * RobotContainer.maxAngularRate);// ChassisSpeeds.fromRobotRelativeSpeeds(velocityRobotWRTRobot, getCurrentBotPoseAllianceUnspecific().getRotation());
+
         double rotationSpeed = velocityRobotWRTField.omegaRadiansPerSecond;
         Pose2d currentTurretPose = getCurrentBotPoseAllianceUnspecific();
         double turretOffset = TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT.getX();
 
-        // double yOffset = TurretConstants.OFFSET_WRT_CENTER_OF_ROBOT.getY();
         double xOffsetWRTField = turretOffset * Math.cos(currentTurretPose.getRotation().getRadians());
         double yOffsetWRTField = turretOffset * Math.sin(currentTurretPose.getRotation().getRadians());
 
