@@ -337,7 +337,7 @@ public final class IntakeSubsystem extends SubsystemBase{
         motorConfig.Slot0.kA != logMMKA.get() ||motorConfig.Slot0.kP != logMMKP.get() ||
         motorConfig.Slot0.kI != logMMKI.get() ||motorConfig.Slot0.kD != logMMKD.get() ||
         motorConfig.Slot0.kG != logMMKG.get() ){
-            
+            //heyyyyyyyy
             configureMotors();
         }
         //updated all fields
