@@ -53,14 +53,12 @@ public class ShooterSubsystem extends SubsystemBase {
         STORING,
         TUNING,
         DISABLED,
-        MANUAL
     }
 
     // Shooting, not shooting
     public enum ShooterState {
         SHOOTING,
         NOT_SHOOTING,
-        MANUAL
     }
 
     private AngleState hoodState = AngleState.ZEROING;
@@ -70,7 +68,7 @@ public class ShooterSubsystem extends SubsystemBase {
     
     private double angle = 0;
     // ^This is for manual testing
-
+    private double mannualVelocityShift = 0;
     private double hoodAngleMax = 14.3;
     private double hoodAngleMin = 0; //old: 3.5
     private double hoodFerryMotorRev = 14.15;
@@ -78,10 +76,9 @@ public class ShooterSubsystem extends SubsystemBase {
     private double degreesToZero = 8;
     private double distanceAwayToUseLowDegree = 1.2;
     private double distanceAwayToUseHighDegree = 1.78;
-    private double mannualVelocityShift = 0;
+    private double targetHood = 0;
+    private double targetShooter = 0;
 
-    private double mannualShooter = 0;
-    private double mannualHood = 0;
     // Motors
     // 2 Shooter motors, 1 Hood angle motor
     private TalonFX leftShooterMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID,RobotConstants.MAIN_SYSTEMS_CANBUS);
@@ -207,13 +204,11 @@ public class ShooterSubsystem extends SubsystemBase {
         shooterConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
         shooterConfiguration.CurrentLimits.SupplyCurrentLimit = 70;
 
-        
         rightShooterMotor.getConfigurator().apply(shooterConfiguration);
-
-        shooterConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         leftShooterMotor.getConfigurator().apply(shooterConfiguration);
-        leftShooterMotor.setControl(new StrictFollower(rightShooterMotor.getDeviceID()));
-    
+
+        leftShooterMotor.setControl(new Follower(rightShooterMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+        
         // Current limits 80 for stator current limit, 70 for supply current limit
         // Configure both motors!
         // Make one follow the other (just like in the intake!)
@@ -239,12 +234,9 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void publishLogs() {
-        //Logger.recordOutput("Rebuilt/")
-        //Logger.recordOutput("Rebuilt/")
-        //Logger.recordOutput("Rebuilt/")
-        //Logger.recordOutput("Rebuilt/")
-        //Logger.recordOutput("Rebuilt/")
-
+        Logger.recordOutput("Rebuilt/Shooter/Angle/HoodPosition",angleMotor.getPosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Shooter/Angle/HoodTarget",angle);
+        Logger.recordOutput("Rebuilt/Shooter/State",hoodState);
         if (logDebuggingToggle.get()) {}
     }
 
@@ -269,8 +261,6 @@ public class ShooterSubsystem extends SubsystemBase {
                 break;
             case DISABLED:
                 break;
-            case MANUAL:
-                angleMotor.setControl(hoodMMRequest.withPosition(mannualHood).withSlot(0));
 
         }
         switch(shooterState) {
@@ -279,9 +269,6 @@ public class ShooterSubsystem extends SubsystemBase {
             case NOT_SHOOTING:
                 rightShooterMotor.setControl(outtakeVRequest.withVelocity(0).withSlot(0));
                 break;
-            case MANUAL:
-                rightShooterMotor.setControl(outtakeVRequest.withVelocity(mannualShooter).withSlot(0));
-
         }
         // When shooting, have it's velocity come from the interpolated data tree depending on the distance it's from the target
         
@@ -363,10 +350,10 @@ public class ShooterSubsystem extends SubsystemBase {
         mannualVelocityShift += 0.5;
     }
     public void subtractManualVelocityShift(double shift) {
-        mannualVelocityShift += shift;
+        mannualVelocityShift -= shift;
     }
     public void subtractManualVelocityShift() {
-        mannualVelocityShift += 0.5;
+        mannualVelocityShift -= 0.5;
     }
     public void resetManualVelocityShift() {
         mannualVelocityShift = 0;
@@ -381,7 +368,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public void initizalize() {
     }
-
+    public void manualAngle(double manualAngle) {
+        angle = manualAngle;
+        hoodState=AngleState.AIMING;
+    }
     public ArrayList<TalonFX> getMotors() {
         ArrayList<TalonFX> arrList = new ArrayList<>();
         arrList.add(angleMotor);
