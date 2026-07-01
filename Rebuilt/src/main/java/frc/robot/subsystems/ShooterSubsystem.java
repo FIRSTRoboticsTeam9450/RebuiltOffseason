@@ -224,6 +224,7 @@ public class ShooterSubsystem extends SubsystemBase {
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current State", currentAngleState);
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current Setpoint", angleSetpoint);
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current Angle", angleMotor.getPosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Shooter/Hood/Current Velocity", angleMotor.getVelocity().getValueAsDouble());
 
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current State", currentShooterState);
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Setpoint", velocSetpoint);
