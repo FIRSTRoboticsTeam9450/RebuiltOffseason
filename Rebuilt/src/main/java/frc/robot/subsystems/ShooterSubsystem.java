@@ -251,7 +251,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 angleMotor.setControl(hoodMMRequest.withPosition(angleSetpoint));
                 break;
             case STORING:
-                angleSetpoint = 3.5;
+                angleSetpoint = 0;
                 angleMotor.setControl(hoodMMRequest.withPosition(angleSetpoint));
                 break;
             case TUNING:

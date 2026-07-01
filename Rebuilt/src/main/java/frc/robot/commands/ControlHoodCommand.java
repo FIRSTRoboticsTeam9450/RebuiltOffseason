@@ -33,9 +33,16 @@ public class ControlHoodCommand extends Command {
   @Override
   public void execute() {
     if (shooter.getCurrentAngleState() == AngleState.TUNING) {
-      double angleMax = shooter.hoodAngleMax - shooter.hoodAngleMin;
-      double anglemin = shooter.hoodAngleMin;
-      shooter.setTuningAngleSetpoint((control.getLeftY() * angleMax) + anglemin);
+      if (control.y().getAsBoolean()) shooter.setTuningAngleSetpoint(shooter.hoodAngleMax);
+      else if (control.a().getAsBoolean()) shooter.setTuningAngleSetpoint(shooter.hoodAngleMin);
+      else {
+        double angleMax = shooter.hoodAngleMax - shooter.hoodAngleMin;
+        double anglemin = shooter.hoodAngleMin;
+        shooter.setTuningAngleSetpoint((control.getLeftY() * angleMax) + anglemin);
+      }
+
+      if (control.b().getAsBoolean()) shooter.setState(ShooterState.SHOOTING, AngleState.TUNING);
+      else if (control.x().getAsBoolean()) shooter.setState(ShooterState.NOT_SHOOTING, AngleState.TUNING);
 
       boolean dpadUp = control.povUp().getAsBoolean();
       boolean dpadDown = control.povDown().getAsBoolean();
@@ -44,8 +51,8 @@ public class ControlHoodCommand extends Command {
       prevDpadUp = dpadUp;
       prevDpadDown = dpadDown;
 
-      if (control.a().getAsBoolean()) shooter.setState(ShooterState.NOT_SHOOTING, AngleState.STORING);
-    } else if (control.y().getAsBoolean()) shooter.setState(ShooterState.NOT_SHOOTING, AngleState.TUNING);
+      if (control.rightBumper().getAsBoolean()) shooter.setState(ShooterState.NOT_SHOOTING, AngleState.STORING);
+    } else if (control.leftBumper().getAsBoolean()) shooter.setState(ShooterState.NOT_SHOOTING, AngleState.TUNING);
   }
 
   // Called once the command ends or is interrupted.
