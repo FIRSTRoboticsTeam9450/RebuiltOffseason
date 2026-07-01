@@ -174,6 +174,8 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
    private void configureShooterMotors() {
+        shooterMotorConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterMotorConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         // Current limits 80 for stator current limit, 70 for supply current limit
         shooterMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
         shooterMotorConfig.CurrentLimits.StatorCurrentLimit = 80;
@@ -188,7 +190,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // Zero the hood motor!
     public boolean autoZeroing() {
-        if (Math.abs(angleMotor.getVelocity().getValueAsDouble()) <= 0.1) {
+        if (angleMotor.getMotorVoltage().getValueAsDouble() > 0 && Math.abs(angleMotor.getVelocity().getValueAsDouble()) <= 0.1) {
             angleMotor.stopMotor();
             angleMotor.setPosition(0);
 
