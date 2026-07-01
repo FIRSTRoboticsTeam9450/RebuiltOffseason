@@ -73,7 +73,6 @@ public final class IntakeSubsystem extends SubsystemBase {
     // EX: private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", default_value); 
     // /Tuning provides the path for it to be a tunable value
     /* Put your code here */
-    // TODO: Real default LoggedNetworkNumber values
     private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity",50);
     private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 10);
     private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/kS", 0.2);

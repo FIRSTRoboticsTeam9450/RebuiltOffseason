@@ -25,10 +25,10 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.Constants.AlignPos;
+import frc.robot.commands.ControlHoodCommand;
 import frc.robot.commands.DriveBrakeCommand;
 import frc.robot.commands.PositionAlignCommand;
 import frc.robot.commands.ResetIMU;
-import frc.robot.commands.SetIntakePosCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -313,8 +313,10 @@ public class RobotContainer {
 
     /* ================ TEST ONLY KEYBINDS ============== */
     DRIVER.start()
-      .onTrue(new SetIntakePosCommand(intakeSub, IntakePos.INTAKING))
-      .onFalse(new SetIntakePosCommand(intakeSub, IntakePos.STORE));
+      .onTrue(intakeSub.setPosCommand(IntakePos.INTAKING))
+      .onFalse(intakeSub.setPosCommand(IntakePos.STORE));
+    
+    shooterSub.setDefaultCommand(new ControlHoodCommand(shooterSub, new CommandXboxController(2))); // third controller :)
 
     /* ============================== SYSID ==================================== */
     // DRIVER.y().whileTrue(shooterSub.sysIdQuasistatic(Direction.kForward));

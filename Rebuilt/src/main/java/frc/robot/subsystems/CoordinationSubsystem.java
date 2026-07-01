@@ -233,7 +233,7 @@ public class CoordinationSubsystem extends SubsystemBase {
     private void applyState() {
         TurretState turretState = TurretState.DISABLED;
         ShooterState shooterVelocState = ShooterState.NOT_SHOOTING;
-        AngleState shooterHoodState = AngleState.DISABLED;
+        AngleState shooterHoodState = AngleState.STORING;
         TransferState transferState = TransferState.NO_RUN;
         IntakePos intakeAngleState = IntakePos.STORE;
         IntakeState intakeVelocState = IntakeState.IDLING;
