@@ -237,12 +237,12 @@ public final class IntakeSubsystem extends SubsystemBase{
 
             case STORING:
                 motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
-                intakeSetpoint = intakeRevolutions;
+                intakeSetpoint = storeRevolutions;
                 break;
                 
             case TRENCH_STORE:
                 motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
-                intakeSetpoint = intakeRevolutions;
+                intakeSetpoint = trenchStoreRevolutions;
                 break;
                 
         }
@@ -256,15 +256,14 @@ public final class IntakeSubsystem extends SubsystemBase{
             //intaking
             case INTAKING:
                 //motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
-                motorArm.setControl(voltageRequest.withOutput(0));
-
+                motorArm.setControl(voltageRequest.withOutput(intakingTargetVolts));
                 intakeSetpoint = intakeRevolutions;
                 break;
 
             case SLOWINTAKE:
                 //PLEASE ask about tuning the amount of volts being put in!!
                 //motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
-                motorArm.setControl(voltageRequest.withOutput(0));
+                motorArm.setControl(voltageRequest.withOutput(4));
                 break;
 
 
@@ -303,8 +302,6 @@ public final class IntakeSubsystem extends SubsystemBase{
     }
 
     public void setPos(IntakePos pos){
-        
-
         //skipping all of the zeroing and defense stuff :p
         //reachedSetpoint = false;//PLEASE check up on this method
         currentPos = pos;
@@ -333,6 +330,7 @@ public final class IntakeSubsystem extends SubsystemBase{
     public void updateConstants() {
 
         // Check if anything values have changed
+        //hiiiiiiiiiiiiiiiii
             // If something has changed, reconfigure motors so the values update
         /* YOUR CODE HERE */
         if (motorConfig.MotionMagic.MotionMagicAcceleration != logMMAccel.get()||  motorConfig.MotionMagic.MotionMagicCruiseVelocity != logMMVeloc.get()|| motorConfig.Slot0.kS != logMMKS.get() || motorConfig.Slot0.kV != logMMKV.get() ||

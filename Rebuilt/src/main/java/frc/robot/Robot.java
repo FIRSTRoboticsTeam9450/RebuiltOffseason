@@ -119,7 +119,7 @@ public class Robot extends LoggedRobot {
     VisionSubsystem.getInstance().setThrottle(0);
     VisionSubsystem.getInstance().setLLIMUModes(1);
     updateValuesOffset = 0;
-    IntakeSubsystem.getInstance().init();
+    //IntakeSubsystem.getInstance().init();
     LEDSubsystem.getInstance().setState(LEDState.TEAM_UNIQUE_DISABLED);
     // SignalLogger.stop();
   }
@@ -134,6 +134,7 @@ public class Robot extends LoggedRobot {
       ShooterSubsystem.getInstance().updateShooterConstants();
     } else if (updateValuesOffset == 30) {
       // Update intake's constants!
+      IntakeSubsystem.getInstance().updateConstants();
     } else if (updateValuesOffset == 15) {
       // ClimberSubsystem.getInstance().updateClimberConstants();
     }
@@ -154,7 +155,7 @@ public class Robot extends LoggedRobot {
   public void autonomousInit() {
     VisionSubsystem.getInstance().setVisionMeasurementStdDevs(VisionSubsystem.getInstance().enabledMT2StdDev);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
-    IntakeSubsystem.getInstance().init();
+    //IntakeSubsystem.getInstance().init();
     RobotContainer.drivetrain.setStatorCurrentLimit(60);
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {
@@ -173,7 +174,7 @@ public class Robot extends LoggedRobot {
     // continue until interrupted by another command, remove
     // this line or comment it out.
     CoordinationSubsystem.getInstance().setHardTrenchOverride(false);
-    IntakeSubsystem.getInstance().init();
+    //IntakeSubsystem.getInstance().init();
     RobotContainer.drivetrain.setStatorCurrentLimit(30);
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();

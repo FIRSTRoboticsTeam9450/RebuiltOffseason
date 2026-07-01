@@ -139,9 +139,9 @@ public class CoordinationSubsystem extends SubsystemBase {
         if(currentState == AbsoluteStates.TRENCH || currentState == AbsoluteStates.CLIMB) {
             ledState = LEDState.SHOOTING_DEADZONE;
         }
-        if(IntakeSubsystem.getInstance().getJammed() || TransferSubsystem.getInstance().jammed()) {
+        /*if(IntakeSubsystem.getInstance().getJammed() || TransferSubsystem.getInstance().jammed()) {
             ledState = LEDState.JAMMED;
-        }
+        }*/
         LEDSubsystem.getInstance().setState(ledState);
     }
 
@@ -229,17 +229,18 @@ public class CoordinationSubsystem extends SubsystemBase {
             }
         }
     }
-
+    
     private void applyState() {
         TurretState turretState = TurretState.DISABLED;
         ShooterState shooterVelocState = ShooterState.NOT_SHOOTING;
         AngleState shooterHoodState = AngleState.DISABLED;
         TransferState transferState = TransferState.NO_RUN;
-        IntakePos intakeAngleState = IntakePos.STORE;
-        IntakeState intakeVelocState = IntakeState.IDLING;
+        /*IntakePos intakeAngleState = IntakePos.STORE;
+        IntakeState intakeVelocState = IntakeState.IDLING;*/
         LEDState ledState = LEDSubsystem.getInstance().getCurrentState();
 
         switch (currentState) {
+            /* 
             case INIT:
                 turretState = TurretState.AIMING;
                 shooterHoodState = AngleState.ZEROING;
@@ -253,6 +254,7 @@ public class CoordinationSubsystem extends SubsystemBase {
                 intakeVelocState = IntakeState.IDLING;
                 shooterVelocState = ShooterState.NOT_SHOOTING;
                 break;
+               
 
             case DEFENSE:
                 turretState = TurretState.EMERGENCY;
@@ -365,14 +367,15 @@ public class CoordinationSubsystem extends SubsystemBase {
                 intakeAngleState = IntakePos.CLIMB_STORE;
                 intakeVelocState = IntakeState.IDLING;
                 ledState = LEDState.SHOOTING_DEADZONE;
-                break;
+                break; */
         }
 
         TurretSubsystem.getInstance().setState(turretState);
         ShooterSubsystem.getInstance().setState(shooterVelocState, shooterHoodState);
         TransferSubsystem.getInstance().setState(transferState);
+        /* 
         IntakeSubsystem.getInstance().setPos(intakeAngleState);
-        IntakeSubsystem.getInstance().setState(intakeVelocState);
+        IntakeSubsystem.getInstance().setState(intakeVelocState);*/
         LEDSubsystem.getInstance().setState(ledState);
     }
 
@@ -399,13 +402,15 @@ public class CoordinationSubsystem extends SubsystemBase {
 
     // ======================== Conditions =============================
     public boolean isZeroingDone() {
-        boolean zeroingDone = ShooterSubsystem.getInstance().getCurrentAngleState() != AngleState.ZEROING 
-        && IntakeSubsystem.getInstance().getCurrentIntakePos() != IntakePos.ZEROING;
+        boolean zeroingDone = ShooterSubsystem.getInstance().getCurrentAngleState() != AngleState.ZEROING ;
+        // && IntakeSubsystem.getInstance().getCurrentIntakePos() != IntakePos.ZEROING
+        
         if(zeroingDone) {
             setState(AbsoluteStates.PREPARING_FOR_SHOOTING, false);
             checkZeroing = false;
         }
         return zeroingDone;
+
     }
     public boolean isShooterReady() {
         return ShooterSubsystem.getInstance().isShooterReady();
