@@ -68,9 +68,9 @@ public final class IntakeSubsystem extends SubsystemBase{
     //motor arm, encoder, leader and follower wheels defined 
     //RESOLVED by Mili
     TalonFX motorArm = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    CANcoder encoder = new CANcoder(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    TalonFX wheelLeader = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    TalonFX wheelFollower = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    CANcoder encoder = new CANcoder(IntakeConstants.DeviceIDs.kAngleEncoderID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    TalonFX wheelLeader = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    TalonFX wheelFollower = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorIDFollower, RobotConstants.MAIN_SYSTEMS_CANBUS);
    
     // Motor configurater!
     TalonFXConfiguration motorConfig = new TalonFXConfiguration();
@@ -246,7 +246,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 break;
                 
         }
-        
+
         // Do the same for intaking states with voltageRequest
         // How to send a request for a motor to do something!
         // motor.setControl(___request.with)
