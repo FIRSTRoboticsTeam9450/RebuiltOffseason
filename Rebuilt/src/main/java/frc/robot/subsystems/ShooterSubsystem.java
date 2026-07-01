@@ -155,6 +155,8 @@ public class ShooterSubsystem extends SubsystemBase {
         angleMotorConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         angleMotorConfig.CurrentLimits.SupplyCurrentLimit = 20;
         // Set motion magic configs
+        angleMotorConfig.MotionMagic.MotionMagicAcceleration = logMMAccel.get();
+        angleMotorConfig.MotionMagic.MotionMagicCruiseVelocity = logMMVeloc.get();
         Slot0Configs slot0Configs = angleMotorConfig.Slot0;
         slot0Configs.kS = logMMKS.get();
         slot0Configs.kV = logMMKV.get();
@@ -181,6 +183,13 @@ public class ShooterSubsystem extends SubsystemBase {
         shooterMotorConfig.CurrentLimits.StatorCurrentLimit = 80;
         shooterMotorConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
         shooterMotorConfig.CurrentLimits.SupplyCurrentLimit = 70;
+        shooterMotorConfig.MotionMagic.MotionMagicAcceleration = logVVAccel.get();
+        Slot0Configs slot0Configs = shooterMotorConfig.Slot0;
+        slot0Configs.kS = logVVKS.get();
+        slot0Configs.kV = logVVKV.get();
+        slot0Configs.kA = logVVKA.get();
+        slot0Configs.kP = logVVKP.get();
+        slot0Configs.kD = logVVKD.get();
         // Configure both motors!
         shooterLeftMotor.getConfigurator().apply(shooterMotorConfig);
         shooterRightMotor.getConfigurator().apply(shooterMotorConfig);
@@ -224,7 +233,6 @@ public class ShooterSubsystem extends SubsystemBase {
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current State", currentAngleState);
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current Setpoint", angleSetpoint);
         Logger.recordOutput("Rebuilt/Shooter/Hood/Current Angle", angleMotor.getPosition().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Shooter/Hood/Current Velocity", angleMotor.getVelocity().getValueAsDouble());
 
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current State", currentShooterState);
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Setpoint", velocSetpoint);
@@ -232,8 +240,12 @@ public class ShooterSubsystem extends SubsystemBase {
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Velocity", shooterLeftMotor.getVelocity().getValueAsDouble());
 
         if (logDebuggingToggle.get()) { // To get rid of loop overruns
+            Logger.recordOutput("Rebuilt/Shooter/Hood/Current Velocity", angleMotor.getVelocity().getValueAsDouble());
+            Logger.recordOutput("Rebuilt/Shooter/Hood/Current Voltage", angleMotor.getMotorVoltage().getValueAsDouble());
             Logger.recordOutput("Rebuilt/Shooter/Cached Distance to Target", cachedDistanceToTarget);
             Logger.recordOutput("Rebuilt/Shooter/Zeroing Done", isZeroingDone);
+
+            Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Voltage", shooterLeftMotor.getMotorVoltage().getValueAsDouble());
 
             Logger.recordOutput("Rebuilt/Shooter/Manual Velocity Shift", manualVelocShift);
             Logger.recordOutput("Rebuilt/Shooter/Tuning Angle Setpoint", angleSetpointTuning);
