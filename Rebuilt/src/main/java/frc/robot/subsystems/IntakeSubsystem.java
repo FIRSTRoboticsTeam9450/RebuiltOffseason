@@ -100,7 +100,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     // Positions
     private double storeRevolutions = 0.385;
     private double trenchStoreRevolutions = 0.21527;
-
+    
+    
     // Current setpoint
     private double intakeSetpoint = 0;
 
@@ -198,7 +199,7 @@ public final class IntakeSubsystem extends SubsystemBase{
         return false;
     }
 
-
+    
     // Runs every 20 millisecs
     @Override
     public void periodic() {

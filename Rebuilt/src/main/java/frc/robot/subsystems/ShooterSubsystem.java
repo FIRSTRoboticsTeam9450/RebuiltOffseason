@@ -33,6 +33,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants;
 import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.RobotConstants.ShooterConstants;
 import frc.robot.Constants.RobotConstants.ShooterConstants.HoodConstants;
@@ -44,31 +45,31 @@ public class ShooterSubsystem extends SubsystemBase {
     private static ShooterSubsystem instance;
 
     // States
+    // Zeroing, Aiming, Deadzone, Storing, Tuning
     public enum AngleState {
-        DISABLED,
         ZEROING,
         AIMING,
         DEADZONE,
         STORING,
-        TUNING
+        TUNING,
+        DISABLED,
+        MANUAL
     }
 
+    // Shooting, not shooting
     public enum ShooterState {
         SHOOTING,
         NOT_SHOOTING,
-        HOLD_IN,
+        MANUAL
     }
 
+    private AngleState hoodState = AngleState.ZEROING;
+    private ShooterState shooterState = ShooterState.NOT_SHOOTING;
     // Other subsystems
-    private CoordinationSubsystem coordSub; // = RobotContainer.coordSub;
-    private VisionSubsystem visionSub; // = RobotContainer.visionSub;
 
-    private AngleState currentAngleState = AngleState.ZEROING;
-    private ShooterState currentShooterState = ShooterState.NOT_SHOOTING;
-
-    private double targetHoodHeight = 0;
-    private double targetHoodAngleOverride = 0;
-    private double targetShooterVeloc = 0;
+    
+    private double angle = 0;
+    // ^This is for manual testing
 
     private double hoodAngleMax = 14.3;
     private double hoodAngleMin = 0; //old: 3.5
@@ -77,66 +78,58 @@ public class ShooterSubsystem extends SubsystemBase {
     private double degreesToZero = 8;
     private double distanceAwayToUseLowDegree = 1.2;
     private double distanceAwayToUseHighDegree = 1.78;
+    private double mannualVelocityShift = 0;
 
+    private double mannualShooter = 0;
+    private double mannualHood = 0;
     // Motors
-    private TalonFX angleMotor = new TalonFX(ShooterConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    private TalonFX shooterLeftMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-    private TalonFX shooterRightMotor = new TalonFX(ShooterConstants.DeviceIDs.kRightShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-
-    TalonFXConfiguration angleMotorConfig = new TalonFXConfiguration();
-    TalonFXConfiguration shooterMotorsConfig = new TalonFXConfiguration();
-
-    private final SysIdRoutine m_sysIdRoutine;
-    private final VoltageOut m_voltReq = new VoltageOut(0.0);
+    // 2 Shooter motors, 1 Hood angle motor
+    private TalonFX leftShooterMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID,RobotConstants.MAIN_SYSTEMS_CANBUS);
+    private TalonFX rightShooterMotor = new TalonFX(ShooterConstants.DeviceIDs.kRightShooterMotorID,RobotConstants.MAIN_SYSTEMS_CANBUS);
+    private TalonFX angleMotor = new TalonFX(ShooterConstants.DeviceIDs.kAngleMotorID,RobotConstants.MAIN_SYSTEMS_CANBUS);
+    
+    // Configurators
+    TalonFXConfiguration hoodConfiguration = new TalonFXConfiguration();
+    TalonFXConfiguration shooterConfiguration = new TalonFXConfiguration();
 
     // Hood Motion Magic parameters
-    private LoggedNetworkNumber logHoodMMVeloc = new LoggedNetworkNumber("/Tuning/Shooter/Angle/Velocity", 800);
-    private LoggedNetworkNumber logHoodMMAccel = new LoggedNetworkNumber("/Tuning/Shooter/Angle/Acceleration", 800);
-    private double hoodMMVelocity = logHoodMMVeloc.get();
-    private double hoodMMAcceleration = logHoodMMAccel.get();
-
-    private LoggedNetworkNumber logHoodMMKS = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kS", .1);
-    private LoggedNetworkNumber logHoodMMKV = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kV", 0.095);
-    private LoggedNetworkNumber logHoodMMKA = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kA", 0);
-    private LoggedNetworkNumber logHoodMMKP = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kP", 15);
-    private LoggedNetworkNumber logHoodMMKI = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kI", 0);
-    private LoggedNetworkNumber logHoodMMKD = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kD", 0);
-    private LoggedNetworkNumber logHoodMMKG = new LoggedNetworkNumber("/Tuning/Shooter/Angle/kG", 0.3);
-
-    private LoggedNetworkNumber logHoodMotorRevTarget = new LoggedNetworkNumber("/Tuning/Shooter/Angle/Target", 3.5);
+    // DynamicMotionMagic - Allows FOC
+    // Veloc, Accel, S, V, A, P, I, D, G
     private DynamicMotionMagicVoltage hoodMMRequest;
 
+    LoggedNetworkNumber hoodMMVelocity = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Velocity", 10);
+    LoggedNetworkNumber hoodMMAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Acceleration",10);
+    LoggedNetworkNumber hoodMMS = new LoggedNetworkNumber("Tuning/Shooter/Hood/KS",0);
+    LoggedNetworkNumber hoodMMV = new LoggedNetworkNumber("Tuning/Shooter/Hood/KV",0);
+    LoggedNetworkNumber hoodMMA = new LoggedNetworkNumber("Tuning/Shooter/Hood/KA",0);
+    LoggedNetworkNumber hoodMMP = new LoggedNetworkNumber("Tuning/Shooter/Hood/KP",0);
+    LoggedNetworkNumber hoodMMI = new LoggedNetworkNumber("Tuning/Shooter/Hood/KI",0);
+    LoggedNetworkNumber hoodMMD = new LoggedNetworkNumber("Tuning/Shooter/Hood/KD",0);
+    LoggedNetworkNumber hoodMMG = new LoggedNetworkNumber("Tuning/Shooter/Hood/KG",0);
+
     // Shooter Outtake Velocity Motion Magic Parameters
-    private LoggedNetworkNumber logOuttakeVKS = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kS", 0.023549);
-    private LoggedNetworkNumber logOuttakeVKV = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kV", 0.11935);
-    private LoggedNetworkNumber logOuttakeVKA = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kA", 0.025517);
-    private LoggedNetworkNumber logOuttakeVKP = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kP", 0.4);
-    private LoggedNetworkNumber logOuttakeVKD = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kD", 0.0);
-    private LoggedNetworkNumber logOuttakeVKFF = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kFF", 2.0);
-    private LoggedNetworkNumber logOuttakeVAccel = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/Acceleration", 9450);
-    private double outtakeVKFF = logOuttakeVKFF.get();
-    private final int outtakeVSlot = 0;
+    // Velocity Voltage S,V,A,P,D, Accel
+
     private final MotionMagicVelocityVoltage outtakeVRequest;
+    LoggedNetworkNumber outtakeVVelocity = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Velocity", 10);
+    LoggedNetworkNumber outtakeVAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Acceleration",10);
+    LoggedNetworkNumber outtakeVS = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KS",0);
+    LoggedNetworkNumber outtakeVV = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KV",0);
+    LoggedNetworkNumber outtakeVA = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KA",0);
+    LoggedNetworkNumber outtakeVP = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KP",0);
+    LoggedNetworkNumber outtakeVI = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KI",0);
+    LoggedNetworkNumber outtakeVD = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KD",0);
+    LoggedNetworkNumber outtakeVG = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KG",0);
 
     // Tuning velocity table
     private LoggedNetworkNumber logTuningShooterVelocity = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/Velocity", 40);
     private LoggedNetworkBoolean logIsTuningShooterVelocity = new LoggedNetworkBoolean("/Tuning/Shooter/Outtake/TuningShooterVelocity?", false);
     
     // Flags
-    private boolean isTuningShooterVelocity = logIsTuningShooterVelocity.get();
-    private boolean isOverrideAngle = false;
-    private boolean isZeroingDone = false;
-    private boolean hasSwitchedBack = false;
-    private boolean hasReachedShooterVelocity = false;
-    private boolean swappedMotors = false;
 
     private final LoggedNetworkBoolean logDebuggingToggle = new LoggedNetworkBoolean("/Tuning/Debugging Toggles/Shooter", false);
 
-    private double manualShift = 0; // For manually adjusting shooter velocity on the fly, added to getShooterVeloc()
-    private double wheelWareAdjustment = 1.5 - 3.5;
-
     // Timer
-    private Timer switchSlotBackTimer = new Timer();
     int slotNum = 0;
 
     // Data tables
@@ -153,634 +146,247 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // ----------------------------- CONSTRUCTOR ---------------------------- //
     public ShooterSubsystem() {
-        swappedMotors = false;
-        configureAngleMotors();
-        configureShooterMotors();
-        addData();
-        hoodMMRequest = new DynamicMotionMagicVoltage(0, hoodMMVelocity, hoodMMAcceleration).withEnableFOC(RobotConstants.ENABLE_FOC).withSlot(slotNum);
-        outtakeVRequest = new MotionMagicVelocityVoltage(0).withSlot(outtakeVSlot).withEnableFOC(RobotConstants.ENABLE_FOC);
-
-        m_sysIdRoutine = 
-            new SysIdRoutine(
-                new SysIdRoutine.Config(
-                    null,        // Use default ramp rate (1 V/s)
-                    Volt.of(4), // Reduce dynamic step voltage to 4 to prevent brownout
-                    null,        // Use default timeout (10 s)
-                                // Log state with Phoenix SignalLogger class
-                    (state) -> Logger.recordOutput("Rebuilt/Shooter/Outtake/SysID/State", state.toString())
-                ),
-                new SysIdRoutine.Mechanism(
-                    (volts) -> shooterLeftMotor.setControl(m_voltReq.withOutput(volts.in(Volt))),
-                    null,
-                    this
-                )
-            );
+        // Set up the requests
+        hoodMMRequest = new DynamicMotionMagicVoltage(0, hoodMMVelocity.get(), hoodMMAcceleration.get()).withEnableFOC(RobotConstants.ENABLE_FOC).withSlot(slotNum);
+        outtakeVRequest = new MotionMagicVelocityVoltage(0).withSlot(0).withEnableFOC(RobotConstants.ENABLE_FOC);
 
     }
 
+    // Data for interpolated data tree for shooter wheel velocity based on distance away from target
     public void addData() {
-
-        shootingDistanceToVelocity.put(6.2, 51.5 + wheelWareAdjustment - .25);
-        shootingDistanceToVelocity.put(5.684, 49.75 + wheelWareAdjustment + .5);
-        shootingDistanceToVelocity.put(5.095, 46.0 + wheelWareAdjustment + .75);
-        shootingDistanceToVelocity.put(4.101, 42.5 + wheelWareAdjustment);
-        shootingDistanceToVelocity.put(3.465, 41.0 + wheelWareAdjustment);
-        shootingDistanceToVelocity.put(3.0, 38.75 + wheelWareAdjustment);
-        shootingDistanceToVelocity.put(2.4, 36.5 + wheelWareAdjustment);
-        shootingDistanceToVelocity.put(1.73, 33.55 + wheelWareAdjustment);
-        shootingDistanceToVelocity.put(1.1, 30.0 + wheelWareAdjustment);
-
-        shootingDistanceToTime.put(5.095, 1.4525);
-        shootingDistanceToTime.put(4.101, 1.374);
-        shootingDistanceToTime.put(3.465, 1.3325);
-        shootingDistanceToTime.put(3.0, 1.235);
-        shootingDistanceToTime.put(2.4, 1.1383);
-        shootingDistanceToTime.put(1.73, 1.032);
-        shootingDistanceToTime.put(1.1, 0.956);
-        
-
-
-        // Ferrying Data Velocity
-        // ferryingDistanceToVelocity.put(4.59, 34.5);
-        // ferryingDistanceToVelocity.put(4.962, 35.72);
-        // ferryingDistanceToVelocity.put(7.622, 42.03);
-        // ferryingDistanceToVelocity.put(11.26, 52.0);
-        // ferryingDistanceToVelocity.put(16.26, 62.75);
-
-        ferryingDistanceToVelocity.put(4.59, 34.5 + 2.5);
-        ferryingDistanceToVelocity.put(4.962, 35.72 + 2.5);
-        ferryingDistanceToVelocity.put(7.622, 42.03 + 8);
-        ferryingDistanceToVelocity.put(11.26, 52.0 + 35);
-        ferryingDistanceToVelocity.put(14.26, 110.0);
-
-        // Ferrying Data Time
-        ferryingDistanceToTime.put(4.59, 1.41);
-        ferryingDistanceToTime.put(11.26, 1.96);
-
 
     }
 
     public void configureAngleMotors() {
-        angleMotorConfig.MotorOutput.NeutralMode = RobotConstants.DEFAULT_NEUTRAL_MODE_VALUE;
-        angleMotorConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-        
-        angleMotorConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        angleMotorConfig.CurrentLimits.StatorCurrentLimit = 40;
-        angleMotorConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        angleMotorConfig.CurrentLimits.SupplyCurrentLimit = 20;
+        hoodConfiguration.MotionMagic.MotionMagicCruiseVelocity = outtakeVVelocity.get();
+        hoodConfiguration.MotionMagic.MotionMagicAcceleration = outtakeVAcceleration.get();
+        hoodConfiguration.Slot0.kS = outtakeVS.get();
+        hoodConfiguration.Slot0.kV = outtakeVV.get();
+        hoodConfiguration.Slot0.kA = outtakeVA.get();
+        hoodConfiguration.Slot0.kP = outtakeVP.get();
+        hoodConfiguration.Slot0.kI = outtakeVI.get();
+        hoodConfiguration.Slot0.kD = outtakeVD.get();
+        hoodConfiguration.Slot0.kG = outtakeVG.get();
 
-        Slot0Configs slot0Config = new Slot0Configs().withKS(logHoodMMKS.get())
-                                                    .withKV(logHoodMMKV.get())
-                                                    .withKA(logHoodMMKA.get())
-                                                    .withKP(logHoodMMKP.get())
-                                                    .withKI(logHoodMMKI.get())
-                                                    .withKD(logHoodMMKD.get())
-                                                    .withKG(logHoodMMKG.get());
-        angleMotorConfig.Slot0 = slot0Config;
-        
-        Slot1Configs slot1Config = new Slot1Configs().withKS(logHoodMMKS.get())
-                                                    .withKV(logHoodMMKV.get())
-                                                    .withKA(logHoodMMKA.get())
-                                                    .withKP(logHoodMMKP.get())
-                                                    .withKI(logHoodMMKI.get())
-                                                    .withKD(logHoodMMKD.get())
-                                                    .withKG(logHoodMMKG.get());
-        angleMotorConfig.Slot1 = slot1Config;
+        hoodConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        hoodConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
-        MotionMagicConfigs mmConfigs = new MotionMagicConfigs().withMotionMagicAcceleration(logHoodMMAccel.get())
-                                                               .withMotionMagicCruiseVelocity(logHoodMMVeloc.get());
-        angleMotorConfig.MotionMagic = mmConfigs;
+        hoodConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        hoodConfiguration.CurrentLimits.StatorCurrentLimit = 40;
+        hoodConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
+        hoodConfiguration.CurrentLimits.SupplyCurrentLimit = 20;
+        hoodConfiguration.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+        hoodConfiguration.SoftwareLimitSwitch.ForwardSoftLimitThreshold = hoodAngleMax;
 
-        angleMotorConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        angleMotorConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
-        angleMotorConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = hoodAngleMax; // Hood angle limit
-        angleMotorConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = 0;
-
-        angleMotor.getConfigurator().apply(angleMotorConfig);
+        angleMotor.getConfigurator().apply(hoodConfiguration);
+        // Set the neutral mode
+        // Set the way the motor spins for pos (find it      phoenix tunner!)
+        // Set current limits (stator 40, supply 20)
+        // Set motion magic configs
+        // Software limits (hood angle max!)
+        // Give it to the config
+        // If you need help refer to your intake subsystem for syntax!
     }
 
    private void configureShooterMotors() {
-        shooterMotorsConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        shooterMotorsConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        shooterConfiguration.MotionMagic.MotionMagicCruiseVelocity = hoodMMVelocity.get();
+        shooterConfiguration.MotionMagic.MotionMagicAcceleration = hoodMMAcceleration.get();
+        shooterConfiguration.Slot0.kS = hoodMMS.get();
+        shooterConfiguration.Slot0.kV = hoodMMV.get();
+        shooterConfiguration.Slot0.kA = hoodMMA.get();
+        shooterConfiguration.Slot0.kP = hoodMMP.get();
+        shooterConfiguration.Slot0.kI = hoodMMI.get();
+        shooterConfiguration.Slot0.kD = hoodMMD.get();
+        shooterConfiguration.Slot0.kG = hoodMMG.get();
 
-        shooterMotorsConfig.CurrentLimits.StatorCurrentLimitEnable = false;
-        shooterMotorsConfig.CurrentLimits.StatorCurrentLimit = 80;
-        shooterMotorsConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-        shooterMotorsConfig.CurrentLimits.SupplyCurrentLowerTime = 1;
-        shooterMotorsConfig.CurrentLimits.SupplyCurrentLimit = 70;
-        shooterMotorsConfig.CurrentLimits.SupplyCurrentLowerLimit = 40;
+        shooterConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
+        shooterConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
+        shooterConfiguration.CurrentLimits.StatorCurrentLimit = 80;
+        shooterConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
+        shooterConfiguration.CurrentLimits.SupplyCurrentLimit = 70;
 
-        Slot0Configs slot0Config = new Slot0Configs().withKS(logOuttakeVKS.get())
-                                                    .withKV(logOuttakeVKV.get())
-                                                    .withKA(logOuttakeVKA.get())
-                                                    .withKP(logOuttakeVKP.get())
-                                                    .withKD(logOuttakeVKD.get());
+        
+        rightShooterMotor.getConfigurator().apply(shooterConfiguration);
 
-        shooterMotorsConfig.Slot0 = slot0Config;
-
-        shooterMotorsConfig.MotionMagic.MotionMagicAcceleration = logOuttakeVAccel.get();
-
-        shooterLeftMotor.getConfigurator().apply(shooterMotorsConfig);
-
-        shooterMotorsConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-        shooterRightMotor.getConfigurator().apply(shooterMotorsConfig);
-
-        shooterRightMotor.setControl(new Follower(shooterLeftMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+        shooterConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        leftShooterMotor.getConfigurator().apply(shooterConfiguration);
+        leftShooterMotor.setControl(new StrictFollower(rightShooterMotor.getDeviceID()));
+    
+        // Current limits 80 for stator current limit, 70 for supply current limit
+        // Configure both motors!
+        // Make one follow the other (just like in the intake!)
     }
 
+    // Zero the hood motor!
     public boolean autoZeroing() {
-        if(Math.abs(angleMotor.getMotorVoltage().getValueAsDouble()) > 0.4 && Math.abs(angleMotor.getVelocity().getValueAsDouble()) < 0.05) {
-            angleMotor.setPosition(0);
-            angleMotor.setVoltage(0);
-            setState(currentShooterState, AngleState.AIMING);
-            coordSub.setState(AbsoluteStates.PREPARING_FOR_SHOOTING, false);
-            return true;
-        }
-        return false;
+        return(Math.abs(angleMotor.getMotorVoltage().getValueAsDouble()) > 0.1 && Math.abs(angleMotor.getVelocity().getValueAsDouble()) < 0.1);
     }
 
     public void zeroEncoder() {
         if (DriverStation.isDisabled()) {
             angleMotor.setPosition(0);
         }
+        
     }
 
     @Override
     public void periodic() {
-        // cachedDistanceToTarget = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
-
-        if (!isZeroingDone) {
-            currentAngleState = AngleState.ZEROING;
-            isZeroingDone = autoZeroing();
-        }
+        // Check zeroing to make sure it stays in zeroing if it's not done
         
-        // if(!shooterLeftMotor.isConnected() && !swappedMotors) {
-        //     swappedMotors = true;
-        //     shooterLeftMotor = new TalonFX(ShooterConstants.DeviceIDs.kRightShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-        //     shooterRightMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
-        // }
-
-        updateReachedShooterVelocityLogic();
-
-        publishLogs();
-
-        if(switchSlotBackTimer.get() > 2 && currentAngleState == AngleState.AIMING && !hasSwitchedBack) {
-            hasSwitchedBack = true;
-            slotNum = 0;
-            hoodMMRequest.withVelocity(hoodMMVelocity)
-                         .withAcceleration(hoodMMAcceleration);
-        }
-        applyState();
+        // Apply state
     }
 
     public void publishLogs() {
-        Logger.recordOutput("Rebuilt/Shooter/Hood/currentState", currentAngleState);
-        Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointMotorRevs", targetHoodHeight);
-        // Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointDegrees", targetHoodHeight * degreesPerRev + degreesToZero);
-        Logger.recordOutput("Rebuilt/Shooter/Hood/current motor revolutions", angleMotor.getPosition().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Shooter/Hood/Left Supply Amps", angleMotor.getSupplyCurrent().getValueAsDouble());
-        // Logger.recordOutput("Rebuilt/Shooter/Hood/current degrees", angleMotor.getPosition().getValueAsDouble() * degreesPerRev + degreesToZero);
-        // Logger.recordOutput("Rebuilt/Shooter/Hood/Is at Goal?", isAngleWithinTolerance());
+        //Logger.recordOutput("Rebuilt/")
+        //Logger.recordOutput("Rebuilt/")
+        //Logger.recordOutput("Rebuilt/")
+        //Logger.recordOutput("Rebuilt/")
+        //Logger.recordOutput("Rebuilt/")
 
-        Logger.recordOutput("Rebuilt/Shooter/Outtake/currentState", currentShooterState);
-        Logger.recordOutput("Rebuilt/Shooter/Outtake/velocitySetpoint", targetShooterVeloc + manualShift);
-        Logger.recordOutput("Rebuilt/Shooter/Outtake/Left Supply Amps", shooterLeftMotor.getSupplyCurrent().getValueAsDouble());
-        Logger.recordOutput("Rebuilt/Shooter/Outtake/Left current velocity", shooterLeftMotor.getVelocity().getValueAsDouble());
-        // Logger.recordOutput("Rebuilt/Shooter/Outtake/Left motor voltage", shooterLeftMotor.getMotorVoltage().getValueAsDouble());
-        // Logger.recordOutput("Rebuilt/Shooter/Outtake/Left motor Position", shooterLeftMotor.getPosition().getValueAsDouble());
-        // Logger.recordOutput("Rebuilt/Shooter/Outtake/Is at Goal?", isVelocityWithinTolerance());
-
-        Logger.recordOutput("Rebuilt/Shooter/Outtake/Manual Adjustment", manualShift);
-
-
-        if (logDebuggingToggle.get()) { // To get rid of loop overruns
-
-            
-            Logger.recordOutput("Rebuilt/Shooter/Time To Shoot", getShootingDistanceToTime(cachedDistanceToTarget));
-
-            // Hood logs
-            Logger.recordOutput("Rebuilt/Shooter/Hood/Took target", hoodAngleFunction(cachedDistanceToTarget));
-            Logger.recordOutput("Rebuilt/Shooter/Hood/voltage", angleMotor.getMotorVoltage().getValueAsDouble());
-            Logger.recordOutput("Rebuilt/Shooter/Hood/Request Accel", hoodMMRequest.Acceleration);
-            Logger.recordOutput("Rebuilt/Shooter/Hood/Request Veloc", hoodMMRequest.Velocity);
-
-            // Logger.recordOutput("Rebuilt/Shooter/Hood/Override hood setpoint", targetHoodAngleOverride);
-            // Logger.recordOutput("Rebuilt/Shooter/Hood/Overriding hood", isOverrideAngle);
-
-            // Outtake logs
-            // Logger.recordOutput("Rebuilt/Shooter/Outtake/Right motor voltage", shooterRightMotor.getMotorVoltage().getValueAsDouble());
-            // Logger.recordOutput("Rebuilt/Shooter/Outtake/TargetOverrideVelocity", logTuningShooterVelocity.get());
-            // Logger.recordOutput("Rebuilt/Shooter/Outtake/Tuning?", isTuningShooterVelocity);
-
-            // Logger.recordOutput("Rebuilt/Shooter/Outtake/Right Motor Position", shooterRightMotor.getPosition().getValueAsDouble());
-        }
+        if (logDebuggingToggle.get()) {}
     }
 
     public void applyState() {
-        switch (currentShooterState) {
-            case SHOOTING:
-                shooterLeftMotor.setControl(outtakeVRequest.withVelocity(getShooterVeloc()));
-                break;
-
-            case NOT_SHOOTING:
-                shooterLeftMotor.setVoltage(0);
-                break;
-            
-            case HOLD_IN:
-                shooterLeftMotor.setControl(outtakeVRequest.withVelocity(-10));
-                break;
-
-            default:
-                break;
-        }
-        switch (currentAngleState) {
+        switch(hoodState) {
             case ZEROING:
-                // if (TurretSubsystem.getInstance().getCurrentState() == TurretSubsystem.TurretState.INIT && TurretSubsystem.getInstance().isAtProfiledGoal(10)) {
-                    // angleMotor.setVoltage(-0.6);
-                // } else {
-                    angleMotor.setControl(new VoltageOut(-1.0));
-                // }
+                angleMotor.setVoltage(-1);
+                if (autoZeroing()) {
+                    angleMotor.setPosition(0);
+                    hoodState = AngleState.STORING;
+                }
                 break;
-
             case AIMING:
-                angleMotor.setControl(hoodMMRequest.withPosition(getShooterAngle()).withSlot(slotNum));
+                angleMotor.setControl(hoodMMRequest.withPosition(angle).withSlot(0));
                 break;
-
+            case DEADZONE:
+                break;
             case STORING:
-                // if (TurretSubsystem.getInstance().getCurrentState() == TurretSubsystem.TurretState.STORING && TurretSubsystem.getInstance().isAtProfiledGoal(15)) {
-                    angleMotor.setControl(hoodMMRequest.withPosition(0).withSlot(slotNum));
-                // }
+                angleMotor.setControl(hoodMMRequest.withPosition(0).withSlot(0));
                 break;
-
             case TUNING:
-                double targetAngle = MathUtil.clamp(logHoodMotorRevTarget.get(), hoodAngleMin, hoodAngleMax);
-                angleMotor.setControl(hoodMMRequest.withPosition(targetAngle).withSlot(slotNum));
                 break;
-                
-            default:
+            case DISABLED:
                 break;
-        }
-    }
+            case MANUAL:
+                angleMotor.setControl(hoodMMRequest.withPosition(mannualHood).withSlot(0));
 
+        }
+        switch(shooterState) {
+            case SHOOTING:
+                break;
+            case NOT_SHOOTING:
+                rightShooterMotor.setControl(outtakeVRequest.withVelocity(0).withSlot(0));
+                break;
+            case MANUAL:
+                rightShooterMotor.setControl(outtakeVRequest.withVelocity(mannualShooter).withSlot(0));
+
+        }
+        // When shooting, have it's velocity come from the interpolated data tree depending on the distance it's from the target
+        
+        // Angle states
+        // Have the aiming state just be manual control because we dont have limelights
+    }
+    public void setAngle(double dir) {
+        angle = dir;
+    }
 
     // --------------------------------------- GETTERS --------------------------------------- //
-    public double getShooterVeloc() {
-        if(!isTuningShooterVelocity) {
-            cachedDistanceToTarget = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
-            switch (coordSub.getCurrentZone()) {
 
-                case SHOOTING_ZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
-
-                case CLIMB_DEADZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
-
-                case FERRY_ZONE_TOP:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
-                    
-                case FERRY_ZONE_BOTTOM:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
-
-                case FERRY_ZONE_MID:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 60; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
-                    
-                case SOFT_TRENCH_DEADZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
-
-                case HARD_TRENCH_DEADZONE:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
-
-                case BACK_SHOOT:
-                    targetShooterVeloc = 70;
-                    break;
-                case SHOOT_OVER_NET:
-                    targetShooterVeloc = 90;
-                    break;
-
-                default:
-                    break;
-            }
-            if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
-                targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-            }
-        }
-        else {
-            targetShooterVeloc = logTuningShooterVelocity.get();
-        }
-        targetShooterVeloc = MathUtil.clamp(targetShooterVeloc, 0, 100);
-        return targetShooterVeloc + manualShift;
-    }
-
-    public double getShooterAngle() {
-        if(!isOverrideAngle) {
-            double distance = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
-            switch (coordSub.getCurrentZone()) {
-                case SHOOTING_ZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
-                case CLIMB_DEADZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
-                    
-                case FERRY_ZONE_TOP:
-                    // targetHoodHeight = hoodAngleFunction(distance);
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break; 
-                    
-                case FERRY_ZONE_BOTTOM:
-                    // targetHoodHeight = hoodAngleFunction(distance);
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break;
-
-                case FERRY_ZONE_MID:
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break;
-
-                case HARD_TRENCH_DEADZONE:
-                    setAngleState(AngleState.STORING);
-                    break;
-
-                case SOFT_TRENCH_DEADZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
-
-                case BACK_SHOOT:
-                    targetHoodHeight = MathUtil.clamp(getAsRevs(20), hoodAngleMin, hoodAngleMax);
-                    break;
-
-                case SHOOT_OVER_NET:
-                    targetHoodHeight = hoodAngleFunctionShootOverNet(distance);
-                    break;
-
-                default:
-                    return 0;
-            }
-            if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
-                targetHoodHeight = hoodAngleFunction(distance);
-            }
-        }
-        else {
-            targetHoodHeight = targetHoodAngleOverride;
-        }
-        return targetHoodHeight;
-
-    }
-
-    public double getShootingDistanceToTime(double distance) {
-        return shootingDistanceToTime.get(distance);
-    }
-
-    public double getFerryingDistanceToTime(double distance) {
-        return ferryingDistanceToTime.get(distance);
-    }
-
-    public double hoodAngleFunction(double distance) {
-        // double wantedAngle = (-60/(distance + 0.8)) + 47;
-        // double wantedAngle = (-200/(distance + 6)) + 39;
-        double wantedAngle = -(200/(distance + 5)) + 47;
-
-        double wantedRevs = getAsRevs(wantedAngle);
-        if(distance <= distanceAwayToUseLowDegree) {
-            wantedRevs = 0; 
-        }
-        // if(distance >= distanceAwayToUseHighDegree && coordSub.getCurrentZone() != ZoneState.SHOOTING_ZONE) {
-        //     wantedRevs = hoodAngleMax;
-        // }
-        return MathUtil.clamp(wantedRevs, hoodAngleMin, hoodAngleMax);
-    }
-
-    public double hoodAngleFunctionShootOverNet(double distance) {
-        // double wantedAngle = (-120/(distance + 4.4)) + 45;
-        double wantedAngle = (-600/(distance + 28)) + 39;
-        double wantedRevs = getAsRevs(wantedAngle);
-        if(distance <= distanceAwayToUseLowDegree) {
-            wantedRevs = 0; 
-        }
-        // if(distance >= distanceAwayToUseHighDegree && coordSub.getCurrentZone() != ZoneState.SHOOTING_ZONE) {
-        //     wantedRevs = hoodAngleMax;
-        // }
-        return MathUtil.clamp(wantedRevs, hoodAngleMin, hoodAngleMax);
-    }
-
+    // Switch hood revs to degrees
     public double getHoodAngleDegrees() {
-        return angleMotor.getPosition().getValueAsDouble() * degreesPerRev + degreesToZero; // add + 15 if you want true angle
+        return angleMotor.getPosition().getValueAsDouble() * degreesPerRev;
     }
 
+    // Switch to revs
     public double getAsRevs(double degrees) {
-        return (degrees-degreesToZero) / degreesPerRev;
-    }
-
-    public AngleState getCurrentAngleState() {
-        return currentAngleState;
+        return degrees / degreesPerRev;
     }
 
     // Checks
-    public boolean isAngleWithinTolerance() {
-        return isAngleWithinTolerance(2.75);
-    }
-
-    public boolean isAngleWithinTolerance(double tolerance) {
-        return Math.abs(targetHoodHeight - angleMotor.getPosition().getValueAsDouble()) < tolerance;
-    }
-
-    public boolean isVelocityWithinTolerance() {
-        return isVelocityWithinTolerance(16);
-    }
-
-    public boolean isVelocityWithinTolerance(double tolerance) {
-        double shooterVeloc = shooterLeftMotor.getVelocity().getValueAsDouble();
-        if (targetShooterVeloc >= 75) {
-            return true;
-        }
-        return Math.abs(targetShooterVeloc + manualShift - shooterVeloc) < tolerance;
-    }
-
-    public boolean isShooterReady() { //TODO: Add back at some point ¯\_(ツ)_/¯
-        if(!hasReachedShooterVelocity) {
-            return (isAngleWithinTolerance() && isVelocityWithinTolerance());
-        }
-        // return false;
-        return (isAngleWithinTolerance() && isVelocityWithinTolerance(20));
-        // return (isAngleWithinTolerance());
-        // return true;
-    }
+    // Is velocity in tolerance?
+    // Is angle in tolerance?
+    // Is the overall shooter ready?
     
-    private void updateReachedShooterVelocityLogic() {
-        if (currentShooterState != ShooterState.SHOOTING) {
-            hasReachedShooterVelocity = false;
-        } else {
-            if (Math.abs(shooterLeftMotor.getVelocity().getValueAsDouble() - getShooterVeloc()) < 3) {
-                hasReachedShooterVelocity = true;
-            }
-        }
-    }
-
     // -------------------------------------- SETTERS -------------------------------------- //
-    
-    /**
-     * Set shooter state
-     * @param wantedShooterState
-     * @param wantedAngleState
-     */
-    public void setState(ShooterState wantedShooterState, AngleState wantedAngleState) {
-        if(currentAngleState == AngleState.ZEROING || currentAngleState == AngleState.STORING) {
-            hoodMMRequest.withVelocity(300)
-                         .withAcceleration(300);
-
-            switchSlotBackTimer.restart();
-            hasSwitchedBack = false;
-        }
-        if(wantedAngleState == AngleState.ZEROING) {
-            isZeroingDone = false;
-        }
-        currentShooterState = wantedShooterState;
-        currentAngleState = wantedAngleState;
-    }
-
-    public Command setStateCommand(ShooterState wantedShooterState, AngleState wantedAngleState) {
-        return new InstantCommand(() -> setState(wantedShooterState, wantedAngleState));
-    }
-
-    public Command setShooterStateCommand(ShooterState wantedShooterState) {
-        return setStateCommand(wantedShooterState, currentAngleState);
-    }
-
-    public Command setAngleState(AngleState wantedAngleState) {
-        return setStateCommand(currentShooterState, wantedAngleState);
-    }
-
-    public void setOverrideModeAngle(boolean isOverrideAngle) {
-        this.isOverrideAngle = isOverrideAngle;
-    }
-
-    public void setOverrideModeShooter() {
-        this.isTuningShooterVelocity = true;
-    }
-
-    public void setOverrideHoodAngle(double targetHoodAngleOverride) {
-        this.targetHoodAngleOverride = MathUtil.clamp(getAsRevs(targetHoodAngleOverride), 0, hoodAngleMax);
-    }
-
-    public void addManualVelocityShift() {
-        manualShift += 0.5;
-    }
-
-    public void addManualVelocityShift(double value) {
-        manualShift += value;
-    }
-
-    public void subtractManualVelocityShift() {
-        manualShift -= 0.5;
-    }
-
-    public void resetManualVelocityShift() {
-        manualShift = 0;
-    }
-
+    // Set states
     // -------------------------------------------- UPDATE BASED ON LOGS -------------------------------------------- //
     public void updateShooterConstants() {
-        boolean updateOuttakeVals = false;
-        boolean updateAngleVals = false;
-        boolean updateSetpoints = false;
-
-        updateSetpoints = (isTuningShooterVelocity != logIsTuningShooterVelocity.get());
-        if(updateSetpoints) {
-            isTuningShooterVelocity = logIsTuningShooterVelocity.get();
+        if 
+        (
+        hoodMMVelocity.get() != hoodConfiguration.MotionMagic.MotionMagicCruiseVelocity ||
+        hoodMMAcceleration.get() != hoodConfiguration.MotionMagic.MotionMagicAcceleration ||
+        hoodMMS.get() != hoodConfiguration.Slot0.kS ||
+        hoodMMV.get() != hoodConfiguration.Slot0.kV ||
+        hoodMMA.get() != hoodConfiguration.Slot0.kA ||
+        hoodMMP.get() != hoodConfiguration.Slot0.kP ||
+        hoodMMI.get() != hoodConfiguration.Slot0.kI ||
+        hoodMMD.get() != hoodConfiguration.Slot0.kD ||
+        hoodMMG.get() != hoodConfiguration.Slot0.kG
+        ) {
+            configureAngleMotors();
         }
-
-        updateOuttakeVals = (shooterMotorsConfig.Slot0.kS != logOuttakeVKS.get())
-                    || (shooterMotorsConfig.Slot0.kV != logOuttakeVKV.get())
-                    || (shooterMotorsConfig.Slot0.kA != logOuttakeVKA.get())
-                    || (shooterMotorsConfig.Slot0.kP != logOuttakeVKP.get())
-                    || (shooterMotorsConfig.Slot0.kD != logOuttakeVKD.get())
-                    || (outtakeVKFF != logOuttakeVKFF.get())
-                    || (shooterMotorsConfig.MotionMagic.MotionMagicAcceleration != logOuttakeVAccel.get());
-
-        if (updateOuttakeVals) {
-            shooterMotorsConfig.Slot0.kS = logOuttakeVKS.get();
-            shooterMotorsConfig.Slot0.kV = logOuttakeVKV.get();
-            shooterMotorsConfig.Slot0.kA = logOuttakeVKA.get();
-            shooterMotorsConfig.Slot0.kP = logOuttakeVKP.get();
-            outtakeVKFF = logOuttakeVKFF.get();
-
-            shooterMotorsConfig.MotionMagic.MotionMagicAcceleration = logOuttakeVAccel.get();
-            
+        if
+        (outtakeVVelocity.get() != shooterConfiguration.MotionMagic.MotionMagicCruiseVelocity ||
+        outtakeVAcceleration.get() != shooterConfiguration.MotionMagic.MotionMagicAcceleration ||
+        outtakeVS.get() != shooterConfiguration.Slot0.kS ||
+        outtakeVV.get() != shooterConfiguration.Slot0.kV ||
+        outtakeVA.get() != shooterConfiguration.Slot0.kA ||
+        outtakeVP.get() != shooterConfiguration.Slot0.kP ||
+        outtakeVI.get() != shooterConfiguration.Slot0.kI ||
+        outtakeVD.get() != shooterConfiguration.Slot0.kD ||
+        outtakeVG.get() != shooterConfiguration.Slot0.kG
+        ) {
             configureShooterMotors();
         }
-
-
-        updateAngleVals = (angleMotorConfig.Slot0.kS != logHoodMMKS.get())
-                    || (angleMotorConfig.Slot0.kV != logHoodMMKV.get())
-                    || (angleMotorConfig.Slot0.kA != logHoodMMKA.get())
-                    || (angleMotorConfig.Slot0.kP != logHoodMMKP.get())
-                    || (angleMotorConfig.Slot0.kI != logHoodMMKI.get())
-                    || (angleMotorConfig.Slot0.kD != logHoodMMKD.get())
-                    || (angleMotorConfig.Slot0.kG != logHoodMMKG.get())
-                    || (angleMotorConfig.MotionMagic.MotionMagicCruiseVelocity != logHoodMMVeloc.get())
-                    || (angleMotorConfig.MotionMagic.MotionMagicAcceleration != logHoodMMAccel.get());
-
-        if (updateAngleVals) {
-            angleMotorConfig.Slot0.kS = logHoodMMKS.get();
-            angleMotorConfig.Slot0.kV = logHoodMMKV.get();
-            angleMotorConfig.Slot0.kA = logHoodMMKA.get();
-            angleMotorConfig.Slot0.kP = logHoodMMKP.get();
-            angleMotorConfig.Slot0.kI = logHoodMMKI.get();
-            angleMotorConfig.Slot0.kD = logHoodMMKD.get();
-            angleMotorConfig.Slot0.kG = logHoodMMKG.get();
-
-            configureAngleMotors();
-
-            hoodMMVelocity = logHoodMMVeloc.get();
-            hoodMMAcceleration = logHoodMMAccel.get();
-
-            hoodMMRequest = new DynamicMotionMagicVoltage(0, hoodMMVelocity, hoodMMAcceleration).withSlot(slotNum);//.withEnableFOC(RobotConstants.ENABLE_FOC);
-        }
-        
     }
-
+    
+    public double getShootingDistanceToTime(double distance) {
+        return 0;
+    }
+    public double getFerryingDistanceToTime(double distance) {
+        return 0;
+    }
+    // Write get instance
     public static ShooterSubsystem getInstance() {
-        if(instance == null) {
-            instance = new ShooterSubsystem();
-            instance.initizalize();
-            // System.out.println("New shooter instance: " + instance.toString());
-        }
+        if (instance == null) instance = new ShooterSubsystem();
         return instance;
     }
+    public AngleState getCurrentAngleState() {
+        return hoodState;
+    }
+    public void addManualVelocityShift(double shift) {
+        mannualVelocityShift += shift;
+    }
+    public void addManualVelocityShift() {
+        mannualVelocityShift += 0.5;
+    }
+    public void subtractManualVelocityShift(double shift) {
+        mannualVelocityShift += shift;
+    }
+    public void subtractManualVelocityShift() {
+        mannualVelocityShift += 0.5;
+    }
+    public void resetManualVelocityShift() {
+        mannualVelocityShift = 0;
+    }
+    public boolean isShooterReady() {
+        return false;
+    }
+    public void setState(ShooterState Shooter, AngleState Angle) {
+        shooterState = Shooter;
+        hoodState = Angle;
+    }
+
     public void initizalize() {
-        visionSub = VisionSubsystem.getInstance();
-        coordSub = CoordinationSubsystem.getInstance();
-    }
-
-    public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
-        return m_sysIdRoutine.quasistatic(direction);
-    }
-
-    public Command sysIdDynamic(SysIdRoutine.Direction direction) {
-        return m_sysIdRoutine.dynamic(direction);
     }
 
     public ArrayList<TalonFX> getMotors() {
         ArrayList<TalonFX> arrList = new ArrayList<>();
         arrList.add(angleMotor);
-        arrList.add(shooterLeftMotor);
-        arrList.add(shooterRightMotor);
+        arrList.add(leftShooterMotor);
+        arrList.add(rightShooterMotor);
         return arrList;
     }
 
