@@ -43,17 +43,19 @@ public final class IntakeSubsystem extends SubsystemBase{
         TRENCH_STORE,
         DEFENSE,
         PUSH_BAR,
-        CLIMB_STORE
+        CLIMB_STORE,
+        ZEROING
     }
 
     // Different intaking states
     // Not intaking, intaking, slow intake
     public enum IntakeState {
-        NOT_INTAKING,
+        IDLING,
         SLOW_INTAKE,
-        INTAKING,
-        IDLING
+        INTAKING
     }
+
+    private Timer zeroingTimer;
 
     //Set the current state of the robot to be idle
     private IntakePos currentPos = IntakePos.STORE;
@@ -108,6 +110,13 @@ public final class IntakeSubsystem extends SubsystemBase{
     private VoltageOut voltageRequest = new VoltageOut(0).withEnableFOC(RobotConstants.ENABLE_FOC);
 
     // Flags
+    private boolean isZeroingDone = false;
+    private boolean jammed = false;
+    private boolean reversing = false;
+
+    //sensitivity thresholds
+    private double velSensitivity = 0.05;
+    private double volSensitivity = 0.15;
 
     // Constructor
     public IntakeSubsystem() {
@@ -196,6 +205,12 @@ public final class IntakeSubsystem extends SubsystemBase{
             // Zero the motor with setPosition()
             // Get out of the zeroing state
             // Set the motor voltage to 0
+        if (zeroingTimer.get() < 0.5) return false;
+        if (Math.abs(motorArm.getVelocity().getValueAsDouble()) < velSensitivity && Math.abs(motorArm.getMotorVoltage().getValueAsDouble()) > volSensitivity) {
+            motorArm.setPosition(0);
+            currentPos = IntakePos.STORE;
+            return true;
+        }
         return false;
     }
 
@@ -223,17 +238,129 @@ public final class IntakeSubsystem extends SubsystemBase{
         // EX: motorWheels.setControl(voltageRequest.withOutput(0));
         /* Your code here */
 
+        switch (currentPos) {
+            case INTAKING:
+                motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                intakeSetpoint = intakeRevolutions;
+                break;
+            case STORE:
+                motorArm.setControl(request.withPosition(storeRevolutions).withSlot(0));
+                intakeSetpoint = storeRevolutions;
+                break;
+            case TRENCH_STORE:
+                motorArm.setControl(request.withPosition(trenchStoreRevolutions).withSlot(0));
+                intakeSetpoint = trenchStoreRevolutions;
+                break;
+            case DEFENSE:
+                //raise arm up high to avoid collision
+                break;
+            case PUSH_BAR:
+                //arm down
+                break;
+            case CLIMB_STORE:
+                //raise arm high enough for climb
+                break;
+            
+            default:
+                //just store i guess
+                motorArm.setControl(request.withPosition(storeRevolutions).withSlot(0));
+                intakeSetpoint = storeRevolutions;
+                break;
+        }
+
+        switch (currentState) {
+            case IDLING:
+                motorWheels.setControl(voltageRequest.withOutput(0));
+                break;
+            case SLOW_INTAKE:
+                motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts * 0.8));
+                break;
+            case INTAKING:
+                if(reversing) {
+                    intakingTargetVolts = -intakingTargetVolts;
+                }
+                if(CoordinationSubsystem.getInstance().isFastTransfer()) {
+                    motorWheels.setControl(voltageRequest.withOutput(10));
+                }
+                else {
+                    motorWheels.setControl(voltageRequest.withOutput(intakingTargetVolts));
+
+                }
+                break;
+        }
+
     }
+
+    // public void jamTest() {
+
+        // use existing jam testing logic since i do not have the requirements for the jam test, also jam isnt ever even checked anyway
+
+        // if(!reachedSetpoint && Math.abs(intakeSetpoint - motorArm.getPosition().getValueAsDouble()) < .1) {
+        //     reachedSetpoint = true;
+        // }
+        // if(currentPos == IntakePos.INTAKING && reachedSetpoint) {
+        //     if(Math.abs(intakeSetpoint - motorArm.getPosition().getValueAsDouble()) > 2) {
+        //         jamCount++;
+        //     }
+        //     else {
+        //         jammed = false;
+        //         jamCount = 0;
+        //     }
+        //     if(jamCount > 5) {
+        //         jammed = true;
+        //     }
+        // }
+        // else if(!reachedSetpoint && Math.abs(motorArm.getVelocity().getValueAsDouble()) < .05 && Math.abs(motorArm.getMotorVoltage().getValueAsDouble()) > 3) {
+        //     jammed = true;
+        // }
+        // else {
+        //     jammed = false;
+        // }
+
+    // }
 
     // Log info so you can debug here
     private void publishLogs() {
         // I recommend logging position, target, and states 
         // The path is "Rebuilt/Intake", each / creates a new subsection so it allows for better organization
         // EX: Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", currentPos);
+
+        Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", currentPos);    
+        Logger.recordOutput("Rebuilt/Intake/Angle/Position", motorArm.getPosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Target", currentPos == IntakePos.INTAKING ? logIntakeTarget.get() : storeRevolutions);
+        Logger.recordOutput("Rebuilt/Intake/Angle/Is Zeroing", isZeroingDone);
+        Logger.recordOutput("Rebuilt/Intake/Angle/Supply Amp Pull", motorArm.getSupplyCurrent().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Encoder Absolute Pos", encoderArm.getAbsolutePosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Wheels/Lead Motor Voltage", motorWheels.getMotorVoltage().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Wheels/Lead Motor Supply Amp Pull", motorWheels.getSupplyCurrent().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Wheels/Follower Motor Voltage", motorWheelsFollower.getMotorVoltage().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Wheels/Follower Motor Supply Amp Pull", motorWheelsFollower.getSupplyCurrent().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Temp", motorArm.getDeviceTemp().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Intake Jammed", jammed);
+
     }
 
     /* CREATE SETTERS AND GETTERS */
-    
+    public boolean getJammed() {
+        return jammed;
+    }
+    public IntakePos getCurrentIntakePos() {
+        return currentPos;
+    }
+
+    public void setPos(IntakePos pos) {
+        if (currentPos == IntakePos.ZEROING) return;
+        if (pos == IntakePos.ZEROING) {
+            isZeroingDone = false;
+            zeroingTimer.reset();
+        }
+        currentPos = pos;
+    }
+
+    public void setState(IntakeState state) {
+        currentState = state;
+    }
+
     // You can return an InstantCommand(() -> _____) so you won't have to in RobotContainer()
 
     // Every subsystem should have one! When using the subsystem in other classes, use getInstance()
