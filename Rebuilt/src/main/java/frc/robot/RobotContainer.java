@@ -233,7 +233,7 @@ public class RobotContainer {
 
 
     DRIVER.x()
-    .onTrue(new InstantCommand(() -> ShooterSubsystem.getInstance().manualAngle(1.5)))
+    .onTrue(new InstantCommand(() -> ShooterSubsystem.getInstance().manualAngle(12)))
     .onFalse(new InstantCommand(() -> ShooterSubsystem.getInstance().manualAngle(0)));
     // DRIVER.rightTrigger().onTrue(
     //   CoordinationSubsystem.getInstance().setOverrideCommand(true)

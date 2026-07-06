@@ -94,22 +94,22 @@ public class ShooterSubsystem extends SubsystemBase {
     // Veloc, Accel, S, V, A, P, I, D, G
     private DynamicMotionMagicVoltage hoodMMRequest;
 
-    LoggedNetworkNumber hoodMMVelocity = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Velocity", 10);
-    LoggedNetworkNumber hoodMMAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Acceleration",10);
+    LoggedNetworkNumber hoodMMVelocity = new LoggedNetworkNumber("Tuning/Shooter/Hood/Velocity", 10);
+    LoggedNetworkNumber hoodMMAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Hood/Acceleration",10);
     LoggedNetworkNumber hoodMMS = new LoggedNetworkNumber("Tuning/Shooter/Hood/KS",0);
     LoggedNetworkNumber hoodMMV = new LoggedNetworkNumber("Tuning/Shooter/Hood/KV",0);
     LoggedNetworkNumber hoodMMA = new LoggedNetworkNumber("Tuning/Shooter/Hood/KA",0);
-    LoggedNetworkNumber hoodMMP = new LoggedNetworkNumber("Tuning/Shooter/Hood/KP",0);
+    LoggedNetworkNumber hoodMMP = new LoggedNetworkNumber("Tuning/Shooter/Hood/KP",10);
     LoggedNetworkNumber hoodMMI = new LoggedNetworkNumber("Tuning/Shooter/Hood/KI",0);
     LoggedNetworkNumber hoodMMD = new LoggedNetworkNumber("Tuning/Shooter/Hood/KD",0);
-    LoggedNetworkNumber hoodMMG = new LoggedNetworkNumber("Tuning/Shooter/Hood/KG",0);
+    LoggedNetworkNumber hoodMMG = new LoggedNetworkNumber("Tuning/Shooter/Hood/KG",0.37);
 
     // Shooter Outtake Velocity Motion Magic Parameters
     // Velocity Voltage S,V,A,P,D, Accel
 
     private final MotionMagicVelocityVoltage outtakeVRequest;
-    LoggedNetworkNumber outtakeVVelocity = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Velocity", 10);
-    LoggedNetworkNumber outtakeVAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Hood/Acceleration",10);
+    LoggedNetworkNumber outtakeVVelocity = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Velocity", 10);
+    LoggedNetworkNumber outtakeVAcceleration = new LoggedNetworkNumber("Tuning/Shooter/Outtake/Acceleration",10);
     LoggedNetworkNumber outtakeVS = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KS",0);
     LoggedNetworkNumber outtakeVV = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KV",0);
     LoggedNetworkNumber outtakeVA = new LoggedNetworkNumber("Tuning/Shooter/Outtake/KA",0);
@@ -155,15 +155,15 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void configureAngleMotors() {
-        hoodConfiguration.MotionMagic.MotionMagicCruiseVelocity = outtakeVVelocity.get();
-        hoodConfiguration.MotionMagic.MotionMagicAcceleration = outtakeVAcceleration.get();
-        hoodConfiguration.Slot0.kS = outtakeVS.get();
-        hoodConfiguration.Slot0.kV = outtakeVV.get();
-        hoodConfiguration.Slot0.kA = outtakeVA.get();
-        hoodConfiguration.Slot0.kP = outtakeVP.get();
-        hoodConfiguration.Slot0.kI = outtakeVI.get();
-        hoodConfiguration.Slot0.kD = outtakeVD.get();
-        hoodConfiguration.Slot0.kG = outtakeVG.get();
+        hoodConfiguration.MotionMagic.MotionMagicCruiseVelocity = hoodMMVelocity.get();
+        hoodConfiguration.MotionMagic.MotionMagicAcceleration = hoodMMAcceleration.get();
+        hoodConfiguration.Slot0.kS = hoodMMS.get();
+        hoodConfiguration.Slot0.kV = hoodMMV.get();
+        hoodConfiguration.Slot0.kA = hoodMMA.get();
+        hoodConfiguration.Slot0.kP = hoodMMP.get();
+        hoodConfiguration.Slot0.kI = hoodMMI.get();
+        hoodConfiguration.Slot0.kD = hoodMMD.get();
+        hoodConfiguration.Slot0.kG = hoodMMG.get();
 
         hoodConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         hoodConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
@@ -186,15 +186,15 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
    private void configureShooterMotors() {
-        shooterConfiguration.MotionMagic.MotionMagicCruiseVelocity = hoodMMVelocity.get();
-        shooterConfiguration.MotionMagic.MotionMagicAcceleration = hoodMMAcceleration.get();
-        shooterConfiguration.Slot0.kS = hoodMMS.get();
-        shooterConfiguration.Slot0.kV = hoodMMV.get();
-        shooterConfiguration.Slot0.kA = hoodMMA.get();
-        shooterConfiguration.Slot0.kP = hoodMMP.get();
-        shooterConfiguration.Slot0.kI = hoodMMI.get();
-        shooterConfiguration.Slot0.kD = hoodMMD.get();
-        shooterConfiguration.Slot0.kG = hoodMMG.get();
+        shooterConfiguration.MotionMagic.MotionMagicCruiseVelocity = outtakeVVelocity.get();
+        shooterConfiguration.MotionMagic.MotionMagicAcceleration = outtakeVAcceleration.get();
+        shooterConfiguration.Slot0.kS = outtakeVS.get();
+        shooterConfiguration.Slot0.kV = outtakeVV.get();
+        shooterConfiguration.Slot0.kA = outtakeVA.get();
+        shooterConfiguration.Slot0.kP = outtakeVP.get();
+        shooterConfiguration.Slot0.kI = outtakeVI.get();
+        shooterConfiguration.Slot0.kD = outtakeVD.get();
+        shooterConfiguration.Slot0.kG = outtakeVG.get();
 
         shooterConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         shooterConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -228,15 +228,18 @@ public class ShooterSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        // Check zeroing to make sure it stays in zeroing if it's not done
-        
-        // Apply state
+        applyState();
+        publishLogs();
     }
 
     public void publishLogs() {
         Logger.recordOutput("Rebuilt/Shooter/Angle/HoodPosition",angleMotor.getPosition().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Shooter/Angle/HoodTarget",angle);
         Logger.recordOutput("Rebuilt/Shooter/State",hoodState);
+        Logger.recordOutput("Rebuilt/Shooter/Angle/MMAccel", hoodMMRequest.Acceleration);
+        Logger.recordOutput("Rebuilt/Shooter/Angle/MMVeloc", hoodMMRequest.Velocity);
+        Logger.recordOutput("Rebuilt/Shooter/Angle/Voltage", angleMotor.getMotorVoltage().getValueAsDouble());
+
         if (logDebuggingToggle.get()) {}
     }
 
@@ -245,8 +248,9 @@ public class ShooterSubsystem extends SubsystemBase {
             case ZEROING:
                 angleMotor.setVoltage(-1);
                 if (autoZeroing()) {
+                    angleMotor.stopMotor();
                     angleMotor.setPosition(0);
-                    hoodState = AngleState.STORING;
+                    hoodState = AngleState.AIMING;
                 }
                 break;
             case AIMING:
@@ -312,6 +316,8 @@ public class ShooterSubsystem extends SubsystemBase {
         hoodMMD.get() != hoodConfiguration.Slot0.kD ||
         hoodMMG.get() != hoodConfiguration.Slot0.kG
         ) {
+            hoodMMRequest.Acceleration = hoodMMAcceleration.get();
+            hoodMMRequest.Velocity = hoodMMVelocity.get();
             configureAngleMotors();
         }
         if
@@ -370,7 +376,6 @@ public class ShooterSubsystem extends SubsystemBase {
     }
     public void manualAngle(double manualAngle) {
         angle = manualAngle;
-        hoodState=AngleState.AIMING;
     }
     public ArrayList<TalonFX> getMotors() {
         ArrayList<TalonFX> arrList = new ArrayList<>();
