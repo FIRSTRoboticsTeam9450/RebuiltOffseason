@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.RobotConstants.IntakeConstants;
 
+import java.io.Console;
 import java.util.ArrayList;
 
 import org.littletonrobotics.junction.Logger;
@@ -78,15 +79,15 @@ public final class IntakeSubsystem extends SubsystemBase{
     // /Tuning provides the path for it to be a tunable value
     /* Put your code here */
 
-    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", 1);
-    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 1);
-    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/KS", 1);
-    private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Intake/Angle/V", 1);
-    private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("/Tuning/Intake/Angle/A", 1);
-    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Intake/Angle/P", 1);
-    private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Intake/Angle/I", 1);
-    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Intake/Angle/D", 1);
-    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/G", 1);
+    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", 0);
+    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 0);
+    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/KS", 0);
+    private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Intake/Angle/KV", 0);
+    private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("/Tuning/Intake/Angle/KA", 0);
+    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Intake/Angle/KP", 0);
+    private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Intake/Angle/KI", 0);
+    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Intake/Angle/KD", 0);
+    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/KG", 0);
 
     private LoggedNetworkNumber logIntakeTarget = new LoggedNetworkNumber("/Tuning/Intake/Angle/Intaking Target", 0.052);
     private LoggedNetworkNumber logIntakingTarget = new LoggedNetworkNumber("/Tuning/Intake/Wheels/Target", 5);
@@ -256,7 +257,7 @@ public final class IntakeSubsystem extends SubsystemBase{
                 break;
             
             case SLOW_INTAKING:
-                motorWheels.setControl(voltageRequest.withOutput(1));
+                motorWheels.setControl(voltageRequest.withOutput(0.2));
                 break;
             
             default:
@@ -274,6 +275,8 @@ public final class IntakeSubsystem extends SubsystemBase{
         Logger.recordOutput("Rebuilt/Intake/State/intakePos",currentIntakePos);
         Logger.recordOutput("Rebuilt/Intake/State/intakeState",currentIntakeState);
         Logger.recordOutput("Rebuilt/Intake/wheels/veloc",motorWheels.getVelocity().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Arm/Setpoint",intakeSetpoint);
+        // Logger.recordOutput("Rebuilt/Intake/Arm/Intaketarget", logIntakeTarget.get());
     }
 
     /* CREATE SETTERS AND GETTERS */
@@ -301,18 +304,16 @@ public final class IntakeSubsystem extends SubsystemBase{
                     || (motorConfig.Slot0.kA != logMMKA.get())
                     || (motorConfig.Slot0.kP != logMMKP.get())
                     || (motorConfig.Slot0.kD != logMMKD.get())
+                    || (motorConfig.Slot0.kI != logMMKI.get())
+                    || (motorConfig.Slot0.kG != logMMKG.get())
+                    || (motorConfig.MotionMagic.MotionMagicCruiseVelocity != logMMVeloc.get())
                     || (motorConfig.MotionMagic.MotionMagicAcceleration != logMMAccel.get());
+
+
+
 // || (outtakeVKFF != logMMFF.get())
 
         if (updateIntakeVals) {
-            motorConfig.Slot0.kS = logMMKS.get();
-            motorConfig.Slot0.kV = logMMKV.get();
-            motorConfig.Slot0.kA = logMMKA.get();
-            motorConfig.Slot0.kP = logMMKP.get();
-            // outtakeVKFF = logOuttakeVKFF.get();
-
-            motorConfig.MotionMagic.MotionMagicAcceleration = logMMAccel.get();
-            
             configureMotors();
         }
 
