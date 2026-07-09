@@ -400,7 +400,7 @@ public class CoordinationSubsystem extends SubsystemBase {
     // ======================== Conditions =============================
     public boolean isZeroingDone() {
         boolean zeroingDone = ShooterSubsystem.getInstance().getCurrentAngleState() != AngleState.ZEROING 
-        && IntakeSubsystem.getInstance().getCurrentIntakePos() != IntakePos.ZEROING;
+        && IntakeSubsystem.getInstance().currentIntakePos != IntakePos.ZEROING; // chagned getCurrentIntakePos() to not function but direction state
         if(zeroingDone) {
             setState(AbsoluteStates.PREPARING_FOR_SHOOTING, false);
             checkZeroing = false;
