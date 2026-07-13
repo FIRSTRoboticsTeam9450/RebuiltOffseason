@@ -17,6 +17,7 @@ public class ControlHoodCommand extends Command {
 
   private boolean prevDpadUp = false;
   private boolean prevDpadDown = false;
+  private boolean prevBack = false;
 
   /** Creates a new ControlHoodCommand. */
   public ControlHoodCommand(ShooterSubsystem shooterSub, CommandXboxController controller) {
@@ -32,13 +33,17 @@ public class ControlHoodCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
+    boolean back = control.back().getAsBoolean();
+    if (back && !prevBack) shooter.zeroEncoder();
+    prevBack = back;
+
     if (shooter.getCurrentAngleState() == AngleState.TUNING) {
       if (control.y().getAsBoolean()) shooter.setTuningAngleSetpoint(shooter.hoodAngleMax);
       else if (control.a().getAsBoolean()) shooter.setTuningAngleSetpoint(shooter.hoodAngleMin);
       else {
         double angleMax = shooter.hoodAngleMax - shooter.hoodAngleMin;
         double anglemin = shooter.hoodAngleMin;
-        shooter.setTuningAngleSetpoint((control.getLeftY() * angleMax) + anglemin);
+        shooter.setTuningAngleSetpoint((((control.getLeftY() + 1) / 2) * angleMax) + anglemin);
       }
 
       if (control.b().getAsBoolean()) shooter.setState(ShooterState.SHOOTING, AngleState.TUNING);

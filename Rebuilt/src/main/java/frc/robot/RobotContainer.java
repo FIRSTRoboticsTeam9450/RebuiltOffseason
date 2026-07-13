@@ -316,7 +316,7 @@ public class RobotContainer {
       .onTrue(intakeSub.setPosCommand(IntakePos.INTAKING))
       .onFalse(intakeSub.setPosCommand(IntakePos.STORE));
     
-    shooterSub.setDefaultCommand(new ControlHoodCommand(shooterSub, new CommandXboxController(2))); // third controller :)
+    shooterSub.setDefaultCommand(new ControlHoodCommand(shooterSub, new CommandXboxController(2)).ignoringDisable(true)); // third controller :)
 
     /* ============================== SYSID ==================================== */
     // DRIVER.y().whileTrue(shooterSub.sysIdQuasistatic(Direction.kForward));

@@ -76,6 +76,9 @@ public class ShooterSubsystem extends SubsystemBase {
     private TalonFX shooterLeftMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
     private TalonFX shooterRightMotor = new TalonFX(ShooterConstants.DeviceIDs.kRightShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
     private TalonFX angleMotor = new TalonFX(ShooterConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+
+    private final SysIdRoutine m_sysIdRoutine;
+    private final VoltageOut m_voltReq = new VoltageOut(0);
     
     // Configurators
     private TalonFXConfiguration shooterMotorConfig = new TalonFXConfiguration();
@@ -84,25 +87,25 @@ public class ShooterSubsystem extends SubsystemBase {
     // Hood Motion Magic parameters
     // DynamicMotionMagic - Allows FOC
     // Veloc, Accel, S, V, A, P, I, D, G
-    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/Velocity", 5);
-    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/Acceleration", 5);
-    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kS", 0);
-    private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kV", 0);
-    private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kA", 0);
-    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kP", 5);
-    private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kI", 0);
-    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kD", 0);
-    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("Rebuilt/Shooter/Hood/kG", 0);
+    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Shooter/Hood/Velocity", 70);
+    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Shooter/Hood/Acceleration", 70);
+    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kS", 0.08);
+    private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kV", 0.1);
+    private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kA", 0);
+    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kP", 10);
+    private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kI", 0);
+    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kD", 0.3);
+    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kG", 0.1);
     private DynamicMotionMagicVoltage hoodMMRequest;
 
     // Shooter Outtake Velocity Motion Magic Parameters
     // Velocity Voltage S,V,A,P,D, Accel
-    private LoggedNetworkNumber logVVAccel = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/Acceleration", 5);
-    private LoggedNetworkNumber logVVKS = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/kS", 0);
-    private LoggedNetworkNumber logVVKV = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/kV", 0);
-    private LoggedNetworkNumber logVVKA = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/kA", 0);
-    private LoggedNetworkNumber logVVKP = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/kP", 5);
-    private LoggedNetworkNumber logVVKD = new LoggedNetworkNumber("Rebuilt/Shooter/Outtake/kD", 0);
+    private LoggedNetworkNumber logVVAccel = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/Acceleration", 5);
+    private LoggedNetworkNumber logVVKS = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kS", 0.15317);
+    private LoggedNetworkNumber logVVKV = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kV", 0.12014);
+    private LoggedNetworkNumber logVVKA = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kA", 0.014434);
+    private LoggedNetworkNumber logVVKP = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kP", 5);
+    private LoggedNetworkNumber logVVKD = new LoggedNetworkNumber("/Tuning/Shooter/Outtake/kD", 0);
     private final MotionMagicVelocityVoltage outtakeVRequest;
 
     // Tuning velocity table
@@ -138,6 +141,22 @@ public class ShooterSubsystem extends SubsystemBase {
 
         configureAngleMotors();
         configureShooterMotors();
+
+        m_sysIdRoutine = 
+            new SysIdRoutine(
+                new SysIdRoutine.Config(
+                    null,        // Use default ramp rate (1 V/s)
+                    Volt.of(4), // Reduce dynamic step voltage to 4 to prevent brownout
+                    null,         // Use default timeout (10 s)
+                                          // Log state with AdvantageKit Logger class
+                    (state) -> Logger.recordOutput("Rebuilt/Shooter/Outtake/SysID/State", state.toString())
+                ),
+                new SysIdRoutine.Mechanism(
+                    (volts) -> shooterLeftMotor.setControl(m_voltReq.withOutput(volts.in(Volt))),
+                    null,
+                    this
+                )
+            );
     }
 
     // Data for interpolated data tree for shooter wheel velocity based on distance away from target
@@ -238,6 +257,8 @@ public class ShooterSubsystem extends SubsystemBase {
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Setpoint", velocSetpoint);
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Reached Setpoint", velocReachedSetpoint);
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Velocity", shooterLeftMotor.getVelocity().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Voltage", shooterLeftMotor.getMotorVoltage().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Shooter/Outtake/Current Position", shooterLeftMotor.getPosition().getValueAsDouble());
 
         if (logDebuggingToggle.get()) { // To get rid of loop overruns
             Logger.recordOutput("Rebuilt/Shooter/Hood/Current Velocity", angleMotor.getVelocity().getValueAsDouble());
@@ -403,6 +424,14 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // Set up the other subsystems
     public void initizalize() {
+    }
+
+    public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutine.quasistatic(direction);
+    }
+
+    public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutine.dynamic(direction);
     }
 
     public ArrayList<TalonFX> getMotors() {
