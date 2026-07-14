@@ -392,8 +392,9 @@ public class CoordinationSubsystem extends SubsystemBase {
         // Logger.recordOutput("Rebuilt/Coord/Is Shooter Ready?", isShooterReady());
         // Logger.recordOutput("Rebuilt/Coord/Is Turret Ready?", isTurretReady());
         // Logger.recordOutput("Rebuilt/Coord/OverridingTrench?", overrideTrench);
-
         if(logDebuggingToggle.get()) {
+            System.out.println("lkasjdflkasdjfsdafadffdsdfsdsfafdsadfsasfdsfdaasfdfda");
+            ShooterSubsystem.getInstance().setState(ShooterState.NOT_SHOOTING, AngleState.TUNING);
         }
     }
 
