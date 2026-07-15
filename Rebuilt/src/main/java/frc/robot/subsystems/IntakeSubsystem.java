@@ -23,6 +23,7 @@ import com.ctre.phoenix6.controls.StrictFollower;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.*;
+import com.ctre.phoenix6.mechanisms.swerve.LegacySwerveRequest.Idle;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -36,17 +37,26 @@ public final class IntakeSubsystem extends SubsystemBase{
 
     //List the positions the intake will use
     // These include, intaking, storing, trench_store (allows the intake to not hit the trench)
+    //RESOLVED by Mili
     public enum IntakePos {
-
+        INTAKING,
+        STORING,
+        TRENCH_STORE
     }
 
     // Different intaking states
     // Not intaking, intaking, slow intake
+    //RESOLVED by Mili
     public enum IntakeState {
+        NOTINTAKING,
+        INTAKING,
+        SLOWINTAKE
         
     }
 
-    //Set the current state of the robot to be idle
+    //Set the current state of the robot to be not intaking
+    IntakeState currentIntakeState = IntakeState.NOTINTAKING;
+    private IntakePos currentPos = IntakePos.STORING;
 
     //Set up the arm motor, encoder and wheel motors
     // TalonFX motor = new TalonFX(motorID, canBUS)
@@ -54,8 +64,14 @@ public final class IntakeSubsystem extends SubsystemBase{
     // CANcoder encoder = new CANcoder(canID, canBUS)
     // Make sure you use constants!
     // The wheels use two motors, one leader, one follower
-    /* Put your code here */
-
+    
+    //motor arm, encoder, leader and follower wheels defined 
+    //RESOLVED by Mili
+    TalonFX motorArm = new TalonFX(IntakeConstants.DeviceIDs.kAngleMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    CANcoder encoder = new CANcoder(IntakeConstants.DeviceIDs.kAngleEncoderID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    TalonFX wheelLeader = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
+    TalonFX wheelFollower = new TalonFX(IntakeConstants.DeviceIDs.kWheelMotorIDFollower, RobotConstants.MAIN_SYSTEMS_CANBUS);
+   
     // Motor configurater!
     TalonFXConfiguration motorConfig = new TalonFXConfiguration();
 
@@ -63,9 +79,23 @@ public final class IntakeSubsystem extends SubsystemBase{
     // EX: private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", default_value); 
     // /Tuning provides the path for it to be a tunable value
     /* Put your code here */
-
+    //RESOLVED by Mili
+       
     private LoggedNetworkNumber logIntakeTarget = new LoggedNetworkNumber("/Tuning/Intake/Angle/Intaking Target", 0.052);
     private LoggedNetworkNumber logIntakingTarget = new LoggedNetworkNumber("/Tuning/Intake/Wheels/Target", 5);
+
+
+    //all PID PARAMETERS
+    //RESOLVED by Mili
+    private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Intake/Angle/Velocity", 0);
+    private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Intake/Angle/Acceleration", 0);
+    private LoggedNetworkNumber logMMKS = new LoggedNetworkNumber("/Tuning/Intake/Angle/KS",0);
+    private LoggedNetworkNumber logMMKV = new LoggedNetworkNumber("/Tuning/Intake/Angle/V",0);
+    private LoggedNetworkNumber logMMKA = new LoggedNetworkNumber("/Tuning/Intake/Angle/A",0);
+    private LoggedNetworkNumber logMMKP = new LoggedNetworkNumber("/Tuning/Intake/Angle/P",0);
+    private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Intake/Angle/I",0);
+    private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Intake/Angle/D",0);
+    private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Intake/Angle/KG",0);
 
     private double intakingTargetVolts = logIntakingTarget.get();
     private double intakeRevolutions = logIntakeTarget.get();
@@ -75,7 +105,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     private double trenchStoreRevolutions = 0.21527;
 
     // Current setpoint
-    private double intakeSetpoint = 0;
+    private double intakeSetpoint = 0; 
+
 
     //Motion Magic Set Up(Intake arm)
     private MotionMagicVoltage request = new MotionMagicVoltage(0).withEnableFOC(RobotConstants.ENABLE_FOC);
@@ -105,7 +136,7 @@ public final class IntakeSubsystem extends SubsystemBase{
         config.MagnetSensor.MagnetOffset = IntakeConstants.kAngleEncoderMagnetOffset;
 
         // Apply it
-        encoderArm.getConfigurator().apply(config);
+        encoder.getConfigurator().apply(config);
     }
 
     private void configureMotors() {
@@ -136,7 +167,7 @@ public final class IntakeSubsystem extends SubsystemBase{
         slot0Configs.GravityType = GravityTypeValue.Arm_Cosine;
 
         // Connect the motor to the encoder
-        motorConfig.Feedback.FeedbackRemoteSensorID = encoderArm.getDeviceID();
+        motorConfig.Feedback.FeedbackRemoteSensorID = encoder.getDeviceID();
         motorConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
 
         // Gear ratio
@@ -157,21 +188,27 @@ public final class IntakeSubsystem extends SubsystemBase{
         
 
         
-        motorWheels.getConfigurator().apply(IntakeConfig);
-        motorWheelsFollower.getConfigurator().apply(IntakeConfig);
-
-        motorWheelsFollower.setControl(new StrictFollower(motorWheels.getDeviceID()));
-        // motorWheelsFollower.stopMotor();
+        wheelLeader.getConfigurator().apply(IntakeConfig);
+        wheelFollower.getConfigurator().apply(IntakeConfig);
+        wheelFollower.setControl(new StrictFollower(wheelLeader.getDeviceID()));
+        // wheelFollower.stopMotor();
     }
 
-    // Used for relative encoders
+    /*  Used for relative encoders (LEGACY)
     public boolean isZeroingDone() {
         // If the motor is not moving but voltage is getting sent to it that means it's zeroed
+        
+        if (motorArm.getSupplyVoltage() > 0 && motorArm.getVelocity() == 0){
             // Zero the motor with setPosition()
             // Get out of the zeroing state
             // Set the motor voltage to 0
+
+            //set motorArm position to 0 (check on this)
+           motorArm.setPosition(0); 
+        }
+            
         return false;
-    }
+    }*/
 
 
     // Runs every 20 millisecs
@@ -191,11 +228,58 @@ public final class IntakeSubsystem extends SubsystemBase{
             //     break;
         /* Your code here */
 
+        switch(currentPos){
+
+            case INTAKING:
+                motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                intakeSetpoint = intakeRevolutions;
+                break;
+
+            case STORING:
+                motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                intakeSetpoint = storeRevolutions;
+                break;
+                
+            case TRENCH_STORE:
+                motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                intakeSetpoint = trenchStoreRevolutions;
+                break;
+                
+        }
+
         // Do the same for intaking states with voltageRequest
         // How to send a request for a motor to do something!
         // motor.setControl(___request.with)
-        // EX: motorWheels.setControl(voltageRequest.withOutput(0));
-        /* Your code here */
+        // EX: wheelLeader.setControl(voltageRequest.withOutput(0));
+        switch(currentIntakeState){
+            
+            //intaking
+            case INTAKING:
+                //motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                motorArm.setControl(voltageRequest.withOutput(intakingTargetVolts));
+                intakeSetpoint = intakeRevolutions;
+                break;
+
+            case SLOWINTAKE:
+                //PLEASE ask about tuning the amount of volts being put in!!
+                //motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                motorArm.setControl(voltageRequest.withOutput(4));
+                break;
+
+
+
+            case NOTINTAKING:
+                //motorArm.setControl(request.withPosition(intakeRevolutions).withSlot(0));
+                motorArm.setControl(voltageRequest.withOutput(0));
+                break;
+
+
+
+            
+        }
+
+        
+        
 
     }
 
@@ -204,9 +288,34 @@ public final class IntakeSubsystem extends SubsystemBase{
         // I recommend logging position, target, and states 
         // The path is "Rebuilt/Intake", each / creates a new subsection so it allows for better organization
         // EX: Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", currentPos);
+        //RESOLVED
+        Logger.recordOutput("Rebuilt/Intake/Angle/Current Pos", encoder.getPosition().getValueAsDouble());
+        Logger.recordOutput("Rebuilt/Intake/Angle/Target", intakeSetpoint);
+        Logger.recordOutput("Rebuilt/Intake/Angle/States", currentIntakeState);
+
     }
 
     /* CREATE SETTERS AND GETTERS */
+
+    public IntakePos getCurrentIntakePos() {
+        return currentPos;
+    }
+
+    public void setPos(IntakePos pos){
+        //skipping all of the zeroing and defense stuff :p
+        //reachedSetpoint = false;//PLEASE check up on this method
+        currentPos = pos;
+    }
+
+    //Setters!!!!
+    public void setState(IntakeState state) {
+        currentIntakeState = state;
+    }
+
+    public Command setPosAndStateCommand(IntakePos pos, IntakeState state) {
+        return new InstantCommand(() -> {setPos(pos); setState(state);});
+    }
+
     
     // You can return an InstantCommand(() -> _____) so you won't have to in RobotContainer()
 
@@ -221,16 +330,24 @@ public final class IntakeSubsystem extends SubsystemBase{
     public void updateConstants() {
 
         // Check if anything values have changed
+        //hiiiiiiiiiiiiiiiii
             // If something has changed, reconfigure motors so the values update
         /* YOUR CODE HERE */
-
+        if (motorConfig.MotionMagic.MotionMagicAcceleration != logMMAccel.get()||  motorConfig.MotionMagic.MotionMagicCruiseVelocity != logMMVeloc.get()|| motorConfig.Slot0.kS != logMMKS.get() || motorConfig.Slot0.kV != logMMKV.get() ||
+        motorConfig.Slot0.kA != logMMKA.get() ||motorConfig.Slot0.kP != logMMKP.get() ||
+        motorConfig.Slot0.kI != logMMKI.get() ||motorConfig.Slot0.kD != logMMKD.get() ||
+        motorConfig.Slot0.kG != logMMKG.get() ){
+            //heyyyyyyyy
+            configureMotors();
+        }
+        //updated all fields
         intakeRevolutions = logIntakeTarget.get();
         intakingTargetVolts = logIntakingTarget.get();
     }
 
-    public void init() {
+    /*public void init() {
         zeroingTimer.restart();
-    }
+    }*/
 
     public void zeroEncoders() {
         if (DriverStation.isDisabled()) {
@@ -241,8 +358,8 @@ public final class IntakeSubsystem extends SubsystemBase{
     public ArrayList<TalonFX> getMotors() {
         ArrayList<TalonFX> arrList = new ArrayList<>();
         arrList.add(motorArm);
-        arrList.add(motorWheels);
-        arrList.add(motorWheelsFollower);
+        arrList.add(wheelLeader);
+        arrList.add(wheelFollower);
         return arrList;
     }
 }
