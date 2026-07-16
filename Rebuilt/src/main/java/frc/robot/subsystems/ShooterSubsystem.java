@@ -13,9 +13,9 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.DynamicMotionMagicVoltage;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.StrictFollower;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -85,7 +85,6 @@ public class ShooterSubsystem extends SubsystemBase {
     private TalonFXConfiguration angleMotorConfig = new TalonFXConfiguration();
 
     // Hood Motion Magic parameters
-    // DynamicMotionMagic - Allows FOC
     // Veloc, Accel, S, V, A, P, I, D, G
     private LoggedNetworkNumber logMMVeloc = new LoggedNetworkNumber("/Tuning/Shooter/Hood/Velocity", 70);
     private LoggedNetworkNumber logMMAccel = new LoggedNetworkNumber("/Tuning/Shooter/Hood/Acceleration", 70);
@@ -96,7 +95,7 @@ public class ShooterSubsystem extends SubsystemBase {
     private LoggedNetworkNumber logMMKI = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kI", 0);
     private LoggedNetworkNumber logMMKD = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kD", 0.3);
     private LoggedNetworkNumber logMMKG = new LoggedNetworkNumber("/Tuning/Shooter/Hood/kG", 0.1);
-    private DynamicMotionMagicVoltage hoodMMRequest;
+    private MotionMagicVoltage hoodMMRequest;
 
     // Shooter Outtake Velocity Motion Magic Parameters
     // Velocity Voltage S,V,A,P,D, Accel
@@ -136,7 +135,7 @@ public class ShooterSubsystem extends SubsystemBase {
     // ----------------------------- CONSTRUCTOR ---------------------------- //
     public ShooterSubsystem() {
         // Set up the requests
-        hoodMMRequest = new DynamicMotionMagicVoltage(0, logMMVeloc.get(), logMMAccel.get()).withEnableFOC(RobotConstants.ENABLE_FOC).withSlot(0);
+        hoodMMRequest = new MotionMagicVoltage(0).withEnableFOC(RobotConstants.ENABLE_FOC).withSlot(0);
         outtakeVRequest = new MotionMagicVelocityVoltage(0).withSlot(0).withEnableFOC(RobotConstants.ENABLE_FOC);
 
         configureAngleMotors();
