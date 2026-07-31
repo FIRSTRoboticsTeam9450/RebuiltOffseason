@@ -32,7 +32,7 @@ public final class Constants {
 
   public static final class RobotConstants {
 
-    public static final String DRIVEBASE_CANBUS_NAME = "CantDrive";
+    public static final String DRIVEBASE_CANBUS_NAME = "CantShoot";
     public static final String MAIN_SYSTEMS_CANBUS_NAME = "CantShoot";
     public static final String RIO_BUS_NAME = "Rio";
 
