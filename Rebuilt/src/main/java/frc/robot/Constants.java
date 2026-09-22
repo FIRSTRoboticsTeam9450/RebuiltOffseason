@@ -32,7 +32,7 @@ public final class Constants {
 
   public static final class RobotConstants {
 
-    public static final String DRIVEBASE_CANBUS_NAME = "CantDrive";
+    public static final String DRIVEBASE_CANBUS_NAME = "CantShoot";
     public static final String MAIN_SYSTEMS_CANBUS_NAME = "CantShoot";
     public static final String RIO_BUS_NAME = "Rio";
 
@@ -131,7 +131,7 @@ public final class Constants {
       public static final double TOTAL_ROTATION_DEGREES = 320; //320
       public static final double TOTAL_ROTATION_RADIANS = Math.toRadians(TOTAL_ROTATION_DEGREES);
       
-      public static final double DEGREE_CHANGE_PER_MOTOR_REVOLUTION = 8.5714285714; //2.24;
+      public static final double DEGREE_CHANGE_PER_MOTOR_REVOLUTION = 360; //8.5714285714; //2.24;
       public static final double ABS_ENCDR_POS_TO_ANGLE = 360;
     }
     
