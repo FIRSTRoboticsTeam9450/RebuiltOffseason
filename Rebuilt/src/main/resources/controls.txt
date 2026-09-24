@@ -1,0 +1,115 @@
+Driver
+    Left trigger
+        Hold
+            Fast transfer
+            Slow drive
+        Press, Release
+            Disable slew mode
+    Right trigger
+        Hold
+            Reject
+    Y
+        Press
+            Reset IMU
+    Right bumper
+        Hold
+            Brake drive
+    Back
+        Press
+            Robot enabled?
+                False
+                    Zero intake
+                    Zero shooter
+        Ignores disable
+Operator
+    Left trigger
+        Hold
+            Reject
+    Right trigger
+        Hold
+            Intake pushing
+    Left bumper
+        Press
+            Toggle intake
+            Toggle shooter
+    Right bumper
+        Press
+            Stop shooter
+            Stop intake
+    Right joystick
+        Press
+            Toggle force trench
+    X
+        Press
+            Shifting turret?
+                True
+                    Increase turret angle shift
+                False
+                    Increase shooter velocity shift
+    Y
+        Press
+            Shifting turret?
+                True
+                    Reset turret angle shift
+                False
+                    Reset shooter velocity shift
+    B
+        Press
+            Shifting turret?
+                True
+                    Decrease turret angle shift
+                False
+                    Decrease shooter velocity shift
+    A
+        Press
+            Force climber down
+            Force set state to preparing for shooting
+    B, X, Y
+        Press
+            Force set state to init
+    Left joystick
+        Hold
+            Don't shift turret
+    POV Up
+        Press
+            Test mode?
+                True
+                    Store climber
+                False
+                    Climb state is handoff and climb level is auto?
+                        True
+                            Set climb state to end
+                        False
+                            Climb state is init or climb state is end, and climb level is auto?
+                                True
+                                    Set climb state to standby
+                                    Wait 0.6 seconds
+                                    Force set state to preparing for shooting
+                                False
+                                    Climb state is standby?
+                                        True
+                                            Set state to climb
+                                            Set climb level to L1
+                                            Set climb state to init
+                                            Wait 0.4 seconds
+                                        False
+                                            Climb state is init?
+                                                True
+                                                    Set climb state to handoff
+                                                False
+                                                    Set climb state to init
+    POV Down
+        Hold
+            Force trust vision
+    POV Right
+        Press
+            Force set state to emergency
+    POV Left
+        Press
+            Force set state to defense
+    Back
+        Press
+            Force climber up
+    Start
+        Press
+            Force climber down
