@@ -11,13 +11,12 @@ import edu.wpi.first.hal.PowerDistributionVersion;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Robot;
 
 public class PDHSubsystem extends SubsystemBase {
   private static PDHSubsystem INSTANCE;
 
   // Defaults to CAN ID 0 for CTRE, 1 for REV (should auto-detect type and id)
-  private final PowerDistribution PDH = Robot.PDH;
+  private final PowerDistribution PDH = new PowerDistribution();
   private final int CAN_ID = PDH.getModule();
   private final ModuleType TYPE = PDH.getType();
   private final PowerDistributionVersion VERSION_NUMBERS = PDH.getVersion();

@@ -1,10 +1,11 @@
+// This file is here because the original file has a few bugs. There also seem to be a few bugs in the JNI.
 package frc.robot.util;
-
-import com.playingwithfusion.jni.BattFuelGaugeJNI;
 
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.util.sendable.SendableRegistry;
+
+import com.playingwithfusion.jni.BattFuelGaugeJNI;
 
 /**
  * CAN based Battery Fuel Gauge (BFG) sensor instance
@@ -149,23 +150,13 @@ public class BattFuelGaugeFixed implements Sendable, AutoCloseable {
   public void saveLog(String filename) {
     BattFuelGaugeJNI.saveLog(m_handle, filename);
   }
-  
-  /**
-   * Determine if BFG is present on the CAN bus and at least one CAN message
-   * was received the past two seconds
-   * 
-   * @return TRUE if at least on CAN message was received from sensor within the past two seconds, otherwise false
-   */
-  public boolean isConnected() {
-    return BattFuelGaugeJNI.isConnected(m_handle);
-  }
 
   // -------------------------------------------------------------------------
   // Core real-time / state values
   // -------------------------------------------------------------------------
 
   /**
-   * Determine the charge/discharge state of the battery
+   * Determine the raw charge/discharge state of the battery
    * FIXED: Added this method
    * 
    * @return The raw charge/discharge state enumeration of the battery
@@ -621,5 +612,15 @@ public class BattFuelGaugeFixed implements Sendable, AutoCloseable {
    */
   public float getMatchDuration() {
     return BattFuelGaugeJNI.getMatchDuration(m_handle);
+  }
+  
+  /**
+   * Determine if BFG is present on the CAN bus and at least one CAN message
+   * was received the past two seconds
+   * 
+   * @return TRUE if at least on CAN message was received from sensor within the past two seconds, otherwise false
+   */
+  public boolean isConnected() {
+    return BattFuelGaugeJNI.isConnected(m_handle);
   }
 }

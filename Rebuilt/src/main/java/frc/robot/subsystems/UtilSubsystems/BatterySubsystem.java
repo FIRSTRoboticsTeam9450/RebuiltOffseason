@@ -16,7 +16,7 @@ public class BatterySubsystem extends SubsystemBase {
 
   private boolean LOG_ON_LOAD = false;
 
-  private final BattFuelGaugeFixed BFG = new BattFuelGaugeFixed(80);
+  public final BattFuelGaugeFixed BFG = new BattFuelGaugeFixed(80); // 80
 
   private final LoggedNetworkBoolean logDebuggingToggleMatch = new LoggedNetworkBoolean("Tuning/Debugging Toggles/Battery Match", true);
   private final LoggedNetworkBoolean logDebuggingToggleNonMatch = new LoggedNetworkBoolean("Tuning/Debugging Toggles/Battery Non-Match", false);
