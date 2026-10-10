@@ -138,7 +138,7 @@ public class ShooterSubsystem extends SubsystemBase {
     private final LoggedNetworkBoolean logDebuggingToggle = new LoggedNetworkBoolean("/Tuning/Debugging Toggles/Shooter", false);
 
     private double manualShift = 0; // For manually adjusting shooter velocity on the fly, added to getShooterVeloc()
-    private double wheelWareAdjustment = 1.5 - 3.5;
+    private double wheelWareAdjustment = 30;
 
     // Timer
     private Timer switchSlotBackTimer = new Timer();
@@ -365,6 +365,8 @@ public class ShooterSubsystem extends SubsystemBase {
         // Logger.recordOutput("Rebuilt/Shooter/Outtake/Is at Goal?", isVelocityWithinTolerance());
 
         Logger.recordOutput("Rebuilt/Shooter/Outtake/Manual Adjustment", manualShift);
+
+        //Logger.recordOutput("Rebuilt/Shooter/Outtake/ManualShift", null);
 
 
         if (logDebuggingToggle.get()) { // To get rid of loop overruns
@@ -706,6 +708,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public void subtractManualVelocityShift() {
         manualShift -= 0.5;
+    }
+
+    public void subtractManualVelocityShift(double value) {
+        manualShift -= value;
     }
 
     public void resetManualVelocityShift() {

@@ -320,6 +320,10 @@ public class RobotContainer {
     OPERATOR.leftBumper().onTrue(shooterSub.setManualFastModeCommand().alongWith(turretSub.setManualFastModeCommand()));
     OPERATOR.b().onTrue(shooterSub.resetManualAimCommand().alongWith(turretSub.resetManualAimCommand()));
 
+    OPERATOR.povLeft().onTrue(new InstantCommand(() -> shooterSub.subtractManualVelocityShift(1)));
+    OPERATOR.povRight().onTrue(new InstantCommand(() -> shooterSub.addManualVelocityShift(1)));
+    OPERATOR.a().onTrue(new InstantCommand(() -> shooterSub.resetManualVelocityShift()));
+
     /* ================ TEST ONLY KEYBINDS ============== */
     
     /* ============================== SYSID ==================================== */
