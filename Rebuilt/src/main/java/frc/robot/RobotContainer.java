@@ -79,6 +79,7 @@ public class RobotContainer {
 
   public static boolean slewMode = false;
   private static final double scalarFactorForSpeed = 0.15;
+  public static boolean inDefenseToggle = false;
 
   public static double maxSpeed = DEFAULT_MAX_SPEED * 0.8;
   public static double maxAngularRate = DEFAULT_MAX_ANGULAR_RATE * 1;
@@ -96,6 +97,7 @@ public class RobotContainer {
   public RobotContainer() {
 
     TurretSubsystem.getInstance().setDriverController(DRIVER);
+    TurretSubsystem.getInstance().setOperatorController(OPERATOR);
 
     configureBindings();
 
@@ -222,13 +224,13 @@ public class RobotContainer {
     //   CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
     //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
     // );
-    DRIVER.leftTrigger().onTrue(
+    DRIVER.rightTrigger().onTrue(
         CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
-        new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed).alongWith(new InstantCommand(() -> slewMode = false)))
+        new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
         // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
     ).onFalse(
       CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
-      new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
+      new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
     );
 
 
@@ -239,76 +241,83 @@ public class RobotContainer {
     //   CoordinationSubsystem.getInstance().setOverrideCommand(false)
     // );
     
-    DRIVER.rightTrigger().onTrue(
-      CoordinationSubsystem.getInstance().setRejectingCommand(true)
-    ).onFalse(
-      CoordinationSubsystem.getInstance().setRejectingCommand(false)
-    );
+    // DRIVER.rightTrigger().onTrue(
+    //   CoordinationSubsystem.getInstance().setRejectingCommand(true)
+    // ).onFalse(
+    //   CoordinationSubsystem.getInstance().setRejectingCommand(false)
+    // );
 
     DRIVER.y().onTrue(new ResetIMU(drivetrain));
 
-    DRIVER.rightBumper().whileTrue(new DriveBrakeCommand(drivetrain));
+    DRIVER.leftBumper().whileTrue(new DriveBrakeCommand(drivetrain));
 
-    DRIVER.back().onTrue(
+    OPERATOR.y().onTrue(
       new InstantCommand(() -> {IntakeSubsystem.getInstance().zeroEncoders(); ShooterSubsystem.getInstance().zeroEncoder();}).ignoringDisable(true)
     );
 
     /* ==================== OPERATOR KEYBINDS ==================== */
 
-    OPERATOR.leftTrigger().onTrue(
+    DRIVER.rightBumper().onTrue(
       CoordinationSubsystem.getInstance().setRejectingCommand(true)
     ).onFalse(
       CoordinationSubsystem.getInstance().setRejectingCommand(false)
     );
 
-    OPERATOR.rightTrigger().onTrue(
+    OPERATOR.leftTrigger().onTrue(
       CoordinationSubsystem.getInstance().setIntakePushing(true)
     ).onFalse(
       CoordinationSubsystem.getInstance().setIntakePushing(false)
     );
 
-    OPERATOR.leftBumper().onTrue(
-      CoordinationSubsystem.getInstance().setIntakeCommand().alongWith(CoordinationSubsystem.getInstance().setFireCommand())
+    OPERATOR.rightTrigger().onTrue(
+      CoordinationSubsystem.getInstance().setIntakeCommand(true).alongWith(CoordinationSubsystem.getInstance().setFireCommand(true))
+    ).onFalse(
+      CoordinationSubsystem.getInstance().setIntakeCommand(false).alongWith(CoordinationSubsystem.getInstance().setFireCommand(false))
     );
 
-    OPERATOR.rightBumper().onTrue(
-      CoordinationSubsystem.getInstance().setFireCommand(false).alongWith(CoordinationSubsystem.getInstance().setIntakeCommand(false))
-    );
+    // OPERATOR.rightBumper().onTrue(
+    //   CoordinationSubsystem.getInstance().setFireCommand(false).alongWith(CoordinationSubsystem.getInstance().setIntakeCommand(false))
+    // );
     
-    OPERATOR.rightStick().onTrue(
+    OPERATOR.rightBumper().onTrue(
       CoordinationSubsystem.getInstance().setForceTrenchCommand()
     );
 
-    OPERATOR.x().onTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
-    OPERATOR.y().onTrue(CoordinationSubsystem.getInstance().resetManualAdjust());
-    OPERATOR.b().onTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
+    // OPERATOR.x().onTrue(CoordinationSubsystem.getInstance().increaseManualAdjust());
+    // OPERATOR.y().onTrue(CoordinationSubsystem.getInstance().resetManualAdjust());
+    // OPERATOR.b().onTrue(CoordinationSubsystem.getInstance().decreaseManualAdjust());
 
-    OPERATOR.a().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setForceClimberDownCommand()).alongWith(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.PREPARING_FOR_SHOOTING, true)));
+    // OPERATOR.a().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setForceClimberDownCommand()).alongWith(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.PREPARING_FOR_SHOOTING, true)));
 
-    OPERATOR.b().and(OPERATOR.x()).and(OPERATOR.y()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
+    OPERATOR.back().and(OPERATOR.start()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
 
-    OPERATOR.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
+    // OPERATOR.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
 
-    OPERATOR.povUp().onTrue(
-      Commands.either(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.STORING)), ClimberSubsystem.getInstance().setClimbStateAndLevelCommand(), (() -> DriverStation.isTest()))
-    );
+    // OPERATOR.povUp().onTrue(
+    //   Commands.either(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.STORING)), ClimberSubsystem.getInstance().setClimbStateAndLevelCommand(), (() -> DriverStation.isTest()))
+    // );
 
-    OPERATOR.povDown().onTrue(
-      VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(true)
-    ).onFalse(
-      VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(false)
-    );
+    // OPERATOR.povDown().onTrue(
+    //   VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(true)
+    // ).onFalse(
+    //   VisionSubsystem.getInstance().setOperatorOverrideVisionTrustCommand(false)
+    // );
 
-    OPERATOR.povRight().onTrue(coordSub.setStateCommand(AbsoluteStates.EMERGENCY, true));
-    OPERATOR.povLeft().onTrue(coordSub.setStateCommand(AbsoluteStates.DEFENSE, true));
+    // OPERATOR.povRight().onTrue(coordSub.setStateCommand(AbsoluteStates.EMERGENCY, true));
+    OPERATOR.x().onTrue(
+      new InstantCommand(() -> coordSub.setState(inDefenseToggle ? AbsoluteStates.PREPARING_FOR_SHOOTING : AbsoluteStates.DEFENSE, true))
+      .andThen(new InstantCommand(() -> inDefenseToggle = !inDefenseToggle)));
     // OPERATOR.povRight().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbLevel(ClimbLevel.L1)).alongWith(new InstantCommand(() -> ClimberSubsystem.getInstance().setClimbState(ClimbStates.INIT))));
     // OPERATOR.povLeft().onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.CLIMB, false).alongWith(new InstantCommand(() -> climbSub.setClimbLevel(ClimbLevel.AUTO)).alongWith(new WaitCommand(0.15)).alongWith(new InstantCommand(() -> climbSub.setClimbState(ClimbStates.INIT)))));
     // OPERATOR.povRight().onTrue(new InstantCommand(() -> climbSub.setClimbLevel(ClimbLevel.AUTO)).alongWith(new InstantCommand(() -> climbSub.setClimbState(ClimbStates.END))));
     // OPERATOR.povLeft().onTrue(new InstantCommand(() -> VisionSubsystem.getInstance().setFerryTarget("top")));
     // OPERATOR.povLeft().onTrue(new InstantCommand(() -> climbSub.setClimbLevel(ClimbLevel.AUTO)).alongWith(new InstantCommand(() -> climbSub.setClimbState(ClimbStates.HANDOFF))));
 
-    OPERATOR.back().onTrue(ClimberSubsystem.getInstance().setForceClimberUpCommand());
-    OPERATOR.start().onTrue(ClimberSubsystem.getInstance().setForceClimberDownCommand());
+    OPERATOR.povUp().onTrue(ClimberSubsystem.getInstance().setForceClimberUpCommand());
+    OPERATOR.povDown().onTrue(ClimberSubsystem.getInstance().setForceClimberDownCommand());
+
+    OPERATOR.leftBumper().onTrue(shooterSub.setManualFastModeCommand().alongWith(turretSub.setManualFastModeCommand()));
+    OPERATOR.b().onTrue(shooterSub.resetManualAimCommand().alongWith(turretSub.resetManualAimCommand()));
 
     /* ================ TEST ONLY KEYBINDS ============== */
     

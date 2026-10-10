@@ -32,6 +32,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.RobotConstants;
 import frc.robot.Constants.RobotConstants.ShooterConstants;
@@ -62,10 +63,14 @@ public class ShooterSubsystem extends SubsystemBase {
     // Other subsystems
     private CoordinationSubsystem coordSub; // = RobotContainer.coordSub;
     private VisionSubsystem visionSub; // = RobotContainer.visionSub;
+    
+    private CommandXboxController operatorController;
 
     private AngleState currentAngleState = AngleState.ZEROING;
     private ShooterState currentShooterState = ShooterState.NOT_SHOOTING;
 
+    private boolean manualFastMode = false;
+    private double manualTargetDistance = 0;
     private double targetHoodHeight = 0;
     private double targetHoodAngleOverride = 0;
     private double targetShooterVeloc = 0;
@@ -320,6 +325,14 @@ public class ShooterSubsystem extends SubsystemBase {
         //     shooterLeftMotor = new TalonFX(ShooterConstants.DeviceIDs.kRightShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
         //     shooterRightMotor = new TalonFX(ShooterConstants.DeviceIDs.kLeftShooterMotorID, RobotConstants.MAIN_SYSTEMS_CANBUS);
         // }
+        
+        // TODO: Make controls change speed good
+        if (operatorController != null) {
+            double leftY = operatorController.getLeftY();
+            if (Math.abs(leftY) >= 0.03) manualTargetDistance += leftY * (manualFastMode ? 1 / 50 : 2.5 / 50);
+
+            manualTargetDistance = Math.max(manualTargetDistance, 0);
+        }
 
         updateReachedShooterVelocityLogic();
 
@@ -427,59 +440,61 @@ public class ShooterSubsystem extends SubsystemBase {
     // --------------------------------------- GETTERS --------------------------------------- //
     public double getShooterVeloc() {
         if(!isTuningShooterVelocity) {
-            cachedDistanceToTarget = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
-            switch (coordSub.getCurrentZone()) {
+            targetShooterVeloc = shootingDistanceToVelocity.get(manualTargetDistance);
 
-                case SHOOTING_ZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
+            // cachedDistanceToTarget = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
+            // switch (coordSub.getCurrentZone()) {
 
-                case CLIMB_DEADZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
+            //     case SHOOTING_ZONE:
+            //         targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         break;
 
-                case FERRY_ZONE_TOP:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
+            //     case CLIMB_DEADZONE:
+            //         targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         break;
+
+            //     case FERRY_ZONE_TOP:
+            //         targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         // if(cachedDistanceToTarget > 14.55) {
+            //         //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
+            //         // }
+            //         break;
                     
-                case FERRY_ZONE_BOTTOM:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
+            //     case FERRY_ZONE_BOTTOM:
+            //         targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         // if(cachedDistanceToTarget > 14.55) {
+            //         //     targetShooterVeloc = 90; //TODO: PRACTICE: remove? recalc?
+            //         // }
+            //         break;
 
-                case FERRY_ZONE_MID:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    // if(cachedDistanceToTarget > 14.55) {
-                    //     targetShooterVeloc = 60; //TODO: PRACTICE: remove? recalc?
-                    // }
-                    break;
+            //     case FERRY_ZONE_MID:
+            //         targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         // if(cachedDistanceToTarget > 14.55) {
+            //         //     targetShooterVeloc = 60; //TODO: PRACTICE: remove? recalc?
+            //         // }
+            //         break;
                     
-                case SOFT_TRENCH_DEADZONE:
-                    targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
+            //     case SOFT_TRENCH_DEADZONE:
+            //         targetShooterVeloc = shootingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         break;
 
-                case HARD_TRENCH_DEADZONE:
-                    targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-                    break;
+            //     case HARD_TRENCH_DEADZONE:
+            //         targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
+            //         break;
 
-                case BACK_SHOOT:
-                    targetShooterVeloc = 70;
-                    break;
-                case SHOOT_OVER_NET:
-                    targetShooterVeloc = 90;
-                    break;
+            //     case BACK_SHOOT:
+            //         targetShooterVeloc = 70;
+            //         break;
+            //     case SHOOT_OVER_NET:
+            //         targetShooterVeloc = 90;
+            //         break;
 
-                default:
-                    break;
-            }
-            if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
-                targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
-            }
+            //     default:
+            //         break;
+            // }
+            // if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
+            //     targetShooterVeloc = ferryingDistanceToVelocity.get(cachedDistanceToTarget);
+            // }
         }
         else {
             targetShooterVeloc = logTuningShooterVelocity.get();
@@ -490,55 +505,58 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public double getShooterAngle() {
         if(!isOverrideAngle) {
-            double distance = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
-            switch (coordSub.getCurrentZone()) {
-                case SHOOTING_ZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
-                case CLIMB_DEADZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
+            targetHoodHeight = hoodAngleFunction(manualTargetDistance);
+            
+            // double distance = visionSub.getDistanceToTarget(visionSub.getAdjustedCurrentTarget());
+            // switch (coordSub.getCurrentZone()) {
+            //     case SHOOTING_ZONE:
+            //         targetHoodHeight = hoodAngleFunction(distance);
+            //         break;
+            //     case CLIMB_DEADZONE:
+            //         targetHoodHeight = hoodAngleFunction(distance);
+            //         break;
                     
-                case FERRY_ZONE_TOP:
-                    // targetHoodHeight = hoodAngleFunction(distance);
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break; 
+            //     case FERRY_ZONE_TOP:
+            //         // targetHoodHeight = hoodAngleFunction(distance);
+            //         targetHoodHeight = hoodFerryMotorRev;
+            //         break; 
                     
-                case FERRY_ZONE_BOTTOM:
-                    // targetHoodHeight = hoodAngleFunction(distance);
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break;
+            //     case FERRY_ZONE_BOTTOM:
+            //         // targetHoodHeight = hoodAngleFunction(distance);
+            //         targetHoodHeight = hoodFerryMotorRev;
+            //         break;
 
-                case FERRY_ZONE_MID:
-                    targetHoodHeight = hoodFerryMotorRev;
-                    break;
+            //     case FERRY_ZONE_MID:
+            //         targetHoodHeight = hoodFerryMotorRev;
+            //         break;
 
-                case HARD_TRENCH_DEADZONE:
-                    setAngleState(AngleState.STORING);
-                    break;
+            //     case HARD_TRENCH_DEADZONE:
+            //         setAngleState(AngleState.STORING);
+            //         break;
 
-                case SOFT_TRENCH_DEADZONE:
-                    targetHoodHeight = hoodAngleFunction(distance);
-                    break;
+            //     case SOFT_TRENCH_DEADZONE:
+            //         targetHoodHeight = hoodAngleFunction(distance);
+            //         break;
 
-                case BACK_SHOOT:
-                    targetHoodHeight = MathUtil.clamp(getAsRevs(20), hoodAngleMin, hoodAngleMax);
-                    break;
+            //     case BACK_SHOOT:
+            //         targetHoodHeight = MathUtil.clamp(getAsRevs(20), hoodAngleMin, hoodAngleMax);
+            //         break;
 
-                case SHOOT_OVER_NET:
-                    targetHoodHeight = hoodAngleFunctionShootOverNet(distance);
-                    break;
+            //     case SHOOT_OVER_NET:
+            //         targetHoodHeight = hoodAngleFunctionShootOverNet(distance);
+            //         break;
 
-                default:
-                    return 0;
-            }
-            if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
-                targetHoodHeight = hoodAngleFunction(distance);
-            }
+            //     default:
+            //         return 0;
+            // }
+            // if(VisionSubsystem.getInstance().getUsingCustomTarget()) {
+            //     targetHoodHeight = hoodAngleFunction(distance);
+            // }
         }
         else {
             targetHoodHeight = targetHoodAngleOverride;
         }
+        targetHoodHeight = MathUtil.clamp(targetHoodHeight, hoodAngleMin, hoodAngleMax);
         return targetHoodHeight;
 
     }
@@ -753,6 +771,23 @@ public class ShooterSubsystem extends SubsystemBase {
             hoodMMRequest = new DynamicMotionMagicVoltage(0, hoodMMVelocity, hoodMMAcceleration).withSlot(slotNum);//.withEnableFOC(RobotConstants.ENABLE_FOC);
         }
         
+    }
+
+    
+    public void setOperatorController(CommandXboxController controller) {
+        this.operatorController = controller;
+    }
+
+    public Command setManualFastModeCommand() {
+        return new InstantCommand(() -> manualFastMode = !manualFastMode);
+    }
+
+    public Command setManualFastModeCommand(boolean value) {
+        return new InstantCommand(() -> manualFastMode = value);
+    }
+
+    public Command resetManualAimCommand() {
+        return new InstantCommand(() -> manualTargetDistance = 0);
     }
 
     public static ShooterSubsystem getInstance() {

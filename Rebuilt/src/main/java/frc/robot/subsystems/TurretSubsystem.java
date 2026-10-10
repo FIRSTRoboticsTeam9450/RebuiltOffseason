@@ -70,6 +70,7 @@ public class TurretSubsystem extends SubsystemBase {
     private final CommandSwerveDrivetrain drivetrain = RobotContainer.drivetrain;
     
     private CommandXboxController driverController;
+    private CommandXboxController operatorController;
     private double controllersCurrentRumbling = 0.0;
     
     // ========================= Configuration =========================
@@ -180,6 +181,8 @@ public class TurretSubsystem extends SubsystemBase {
 
     private boolean useManualAdjust = true;
     private double manualShift = 0;
+    private double manualTargetAngle = 0;
+    private boolean manualFastMode = false;
     
     // Control requests
     private final PositionVoltage positionRequest = new PositionVoltage(0).withSlot(0).withEnableFOC(false);
@@ -340,8 +343,15 @@ public class TurretSubsystem extends SubsystemBase {
         updateTargetFromMode();
         
         // Convert field-relative goal to robot-relative 
-        Rotation2d robotRelativeGoalAngle = fieldRelativeGoalAngle.plus(
-            new Rotation2d(Units.degreesToRadians(angleOffsetToZero + degreeOffsetToTarget)));
+        // Rotation2d robotRelativeGoalAngle = fieldRelativeGoalAngle.plus(
+        //     new Rotation2d(Units.degreesToRadians(angleOffsetToZero + degreeOffsetToTarget)));
+        
+        // TODO: Make controls change speed good (also make sure this works properly with wrapping over multiple rotations)
+        if (operatorController != null) {
+            double rightX = operatorController.getRightX();
+            if (Math.abs(rightX) >= 0.03) manualTargetAngle += rightX * (manualFastMode ? 1 / 50 : 2.5 / 50);
+        }
+        Rotation2d robotRelativeGoalAngle = new Rotation2d(manualTargetAngle);
         
         // Find best angle considering wrapping and limits
         robotRelativeTargetAngleDeg = findBestWrappedAngle(robotRelativeGoalAngle.getDegrees());
@@ -791,27 +801,32 @@ public class TurretSubsystem extends SubsystemBase {
                     if (controllersCurrentRumbling != 0.15) {
                         controllersCurrentRumbling = 0.15;
                         driverController.setRumble(RumbleType.kBothRumble, 0.15);
+                        operatorController.setRumble(RumbleType.kBothRumble, 0.15);
                     }
                 } else if (profiledSetpointDeg == MIN_ANGLE_DEG) {
                     if (controllersCurrentRumbling != 0.05) {
                         controllersCurrentRumbling = 0.05;
                         driverController.setRumble(RumbleType.kLeftRumble, 0.15);
+                        operatorController.setRumble(RumbleType.kLeftRumble, 0.15);
                     }
                 } else if (profiledSetpointDeg == MAX_ANGLE_DEG) {
                     if (controllersCurrentRumbling != 0.1) {
                         controllersCurrentRumbling = 0.1;
                         driverController.setRumble(RumbleType.kRightRumble, 0.15);
+                        operatorController.setRumble(RumbleType.kRightRumble, 0.15);
                     }
                 } else {
                     if (controllersCurrentRumbling != 0.0) {
                         controllersCurrentRumbling = 0.0;
                         driverController.setRumble(RumbleType.kBothRumble, 0.0);
+                        operatorController.setRumble(RumbleType.kBothRumble, 0.0);
                     }
                 }
             } else {
                 if (controllersCurrentRumbling != 0.0) {
                     controllersCurrentRumbling = 0.0;
                     driverController.setRumble(RumbleType.kBothRumble, 0.0);
+                    operatorController.setRumble(RumbleType.kBothRumble, 0.0);
                 }
             }
         }
@@ -1018,6 +1033,27 @@ public class TurretSubsystem extends SubsystemBase {
      */
     public void setDriverController(CommandXboxController controller) {
         this.driverController = controller;
+    }
+    
+    /**
+     * Sets the operator controller for manual control.
+     * 
+     * @param controller Operator's Xbox controller
+     */
+    public void setOperatorController(CommandXboxController controller) {
+        this.operatorController = controller;
+    }
+
+    public Command setManualFastModeCommand() {
+        return new InstantCommand(() -> manualFastMode = !manualFastMode);
+    }
+
+    public Command setManualFastModeCommand(boolean value) {
+        return new InstantCommand(() -> manualFastMode = value);
+    }
+
+    public Command resetManualAimCommand() {
+        return new InstantCommand(() -> manualTargetAngle = 0);
     }
     
     // ========================= Getters =========================
