@@ -98,6 +98,7 @@ public class RobotContainer {
 
     TurretSubsystem.getInstance().setDriverController(DRIVER);
     TurretSubsystem.getInstance().setOperatorController(OPERATOR);
+    ShooterSubsystem.getInstance().setOperatorController(OPERATOR);
 
     configureBindings();
 

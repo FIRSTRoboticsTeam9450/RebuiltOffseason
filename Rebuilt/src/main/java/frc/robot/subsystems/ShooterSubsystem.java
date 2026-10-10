@@ -329,8 +329,7 @@ public class ShooterSubsystem extends SubsystemBase {
         // TODO: Make controls change speed good
         if (operatorController != null) {
             double leftY = operatorController.getLeftY();
-            if (Math.abs(leftY) >= 0.03) manualTargetDistance += leftY * (manualFastMode ? 1 / 50 : 2.5 / 50);
-
+            if (Math.abs(leftY) >= 0.03) manualTargetDistance -= leftY * (manualFastMode ? 1 / 50 : 2.5 / 50);
             manualTargetDistance = Math.max(manualTargetDistance, 0);
         }
 
@@ -350,6 +349,7 @@ public class ShooterSubsystem extends SubsystemBase {
     public void publishLogs() {
         Logger.recordOutput("Rebuilt/Shooter/Hood/currentState", currentAngleState);
         Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointMotorRevs", targetHoodHeight);
+        Logger.recordOutput("Rebuilt/Shooter/manualTargetDistance", manualTargetDistance);
         // Logger.recordOutput("Rebuilt/Shooter/Hood/angleSetpointDegrees", targetHoodHeight * degreesPerRev + degreesToZero);
         Logger.recordOutput("Rebuilt/Shooter/Hood/current motor revolutions", angleMotor.getPosition().getValueAsDouble());
         Logger.recordOutput("Rebuilt/Shooter/Hood/Left Supply Amps", angleMotor.getSupplyCurrent().getValueAsDouble());

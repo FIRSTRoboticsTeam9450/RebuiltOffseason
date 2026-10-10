@@ -343,15 +343,15 @@ public class TurretSubsystem extends SubsystemBase {
         updateTargetFromMode();
         
         // Convert field-relative goal to robot-relative 
-        // Rotation2d robotRelativeGoalAngle = fieldRelativeGoalAngle.plus(
-        //     new Rotation2d(Units.degreesToRadians(angleOffsetToZero + degreeOffsetToTarget)));
+        Rotation2d robotRelativeGoalAngle = fieldRelativeGoalAngle.plus(
+            new Rotation2d(Units.degreesToRadians(angleOffsetToZero + degreeOffsetToTarget)));
         
         // TODO: Make controls change speed good (also make sure this works properly with wrapping over multiple rotations)
         if (operatorController != null) {
             double rightX = operatorController.getRightX();
-            if (Math.abs(rightX) >= 0.03) manualTargetAngle += rightX * (manualFastMode ? 1 / 50 : 2.5 / 50);
+            if (Math.abs(rightX) >= 0.03) manualTargetAngle += rightX; // * (manualFastMode ? 1 / 50 : 2.5 / 50);
         }
-        Rotation2d robotRelativeGoalAngle = new Rotation2d(manualTargetAngle);
+        // Rotation2d robotRelativeGoalAngle = new Rotation2d(manualTargetAngle);
         
         // Find best angle considering wrapping and limits
         robotRelativeTargetAngleDeg = findBestWrappedAngle(robotRelativeGoalAngle.getDegrees());
@@ -603,6 +603,7 @@ public class TurretSubsystem extends SubsystemBase {
                     if(useManualAdjust) {
                         profiledSetpointDeg += manualShift;
                     }
+                    profiledSetpointDeg += manualTargetAngle;
                     // Clamp to physical limits
                     profiledSetpointDeg = MathUtil.clamp(
                         profiledSetpointDeg, 
@@ -847,6 +848,7 @@ public class TurretSubsystem extends SubsystemBase {
         // Position tracking
         Logger.recordOutput("Rebuilt/Turret/Pos/CurrentAngleDeg", cachedAngleDeg);
         Logger.recordOutput("Rebuilt/Turret/Target/ProfiledSetpointDeg", profiledSetpointDeg);
+        Logger.recordOutput("Rebuilt/Turret/manualTargetAngle", manualTargetAngle);
 
         Logger.recordOutput("Rebuilt/Turret/Device/Motor Supply Amps", turretMotor.getSupplyCurrent().getValueAsDouble());
         
