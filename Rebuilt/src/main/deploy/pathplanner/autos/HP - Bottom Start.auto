@@ -56,6 +56,6 @@
     }
   },
   "resetOdom": true,
-  "folder": "Push",
+  "folder": null,
   "choreoAuto": false
 }

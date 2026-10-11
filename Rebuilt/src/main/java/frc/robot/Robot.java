@@ -150,10 +150,12 @@ public class Robot extends LoggedRobot {
   public void autonomousInit() {
     VisionSubsystem.getInstance().setVisionMeasurementStdDevs(VisionSubsystem.getInstance().enabledMT2StdDev);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    System.out.println("got auto");
     IntakeSubsystem.getInstance().init();
     RobotContainer.drivetrain.setStatorCurrentLimit(60);
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {
+    System.out.println("running auto");
       CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
   }

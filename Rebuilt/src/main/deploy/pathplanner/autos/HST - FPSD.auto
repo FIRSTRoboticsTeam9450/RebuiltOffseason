@@ -38,6 +38,6 @@
     }
   },
   "resetOdom": true,
-  "folder": "Half Sweep",
+  "folder": null,
   "choreoAuto": false
 }

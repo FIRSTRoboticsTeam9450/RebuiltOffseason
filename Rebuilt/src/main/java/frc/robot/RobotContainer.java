@@ -126,6 +126,8 @@ public class RobotContainer {
         
     autoChooser.addOption("Intake From Hub", drivetrain.getAutoPath("Sit", false));
 
+    autoChooser.addOption("Bordie Final Left", drivetrain.getAutoPath("Bordie Final", false));
+    autoChooser.addOption("Bordie Final Right", drivetrain.getAutoPath("Bordie Final", true));
     autoChooser.addOption("CMP - Long Ferry", drivetrain.getAutoPath("CMP - Long Ferry", false));
 
     // autoChooser.addOption("Climb Test", drivetrain.getAutoPath("Climb Only", false));
@@ -150,10 +152,12 @@ public class RobotContainer {
                 boolean yNegative = driveY < 0;
                 driveX = xNegative ? (Math.pow(driveX, 2) * -1.0) : Math.pow(driveX, 2);
                 driveY = yNegative ? (Math.pow(driveY, 2) * -1.0) : Math.pow(driveY, 2);
-                double driveRotate = rotationAccelLimiter.calculate(-rotateBezier.getOutput(DRIVER.getRightX()) * maxAngularRate);
+                //double driveRotate = rotationAccelLimiter.calculate(-rotateBezier.getOutput(DRIVER.getRightX()) * DEFAULT_MAX_ANGULAR_RATE);//maxAngularRate);
+                double driveRotate = rotationAccelLimiter.calculate(-Math.pow(DRIVER.getRightX(), 2)) * DEFAULT_MAX_ANGULAR_RATE;
                 double joyX = -DRIVER.getLeftX();
                 double joyY = DRIVER.getLeftY();
-                double speed = driveBezier.getOutput(Math.hypot(joyX, joyY)) * maxSpeed;
+                //double speed = driveBezier.getOutput(Math.hypot(joyX, joyY)) * DEFAULT_MAX_SPEED;//maxSpeed;
+                double speed = (Math.pow(2, Math.hypot(joyX, joyY)) - 1) * DEFAULT_MAX_SPEED;
                 double rotation = Math.atan(joyY/joyX);
                 if(joyY < 0 && joyX < 0) {
                   rotation = Math.PI - rotation;
@@ -225,14 +229,20 @@ public class RobotContainer {
     //   CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
     //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1).alongWith(new InstantCommand(() -> slewMode = false)))
     // );
-    DRIVER.rightTrigger().onTrue(
-        CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
-        new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
-        // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
-    ).onFalse(
-      CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
-      new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
-    );
+
+
+
+    // what the heck screw this -a tired max at bordie
+    // riker please stop pressing this
+
+    // DRIVER.rightTrigger().onTrue(
+    //     CoordinationSubsystem.getInstance().setFastTransferCommand(true).andThen(
+    //     new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * scalarFactorForSpeed)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
+    //     // new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED).alongWith(new InstantCommand(() -> slewMode = true))
+    // ).onFalse(
+    //   CoordinationSubsystem.getInstance().setFastTransferCommand(false).andThen(
+    //   new InstantCommand(() -> maxSpeed = DEFAULT_MAX_SPEED * 1)/*.alongWith(new InstantCommand(() -> slewMode = false))*/)
+    // );
 
 
 
@@ -290,7 +300,8 @@ public class RobotContainer {
 
     // OPERATOR.a().onTrue(new InstantCommand(() -> ClimberSubsystem.getInstance().setForceClimberDownCommand()).alongWith(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.PREPARING_FOR_SHOOTING, true)));
 
-    OPERATOR.back().and(OPERATOR.start()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
+    //TODO: turn this back on later
+    //OPERATOR.back().and(OPERATOR.start()).onTrue(CoordinationSubsystem.getInstance().setStateCommand(AbsoluteStates.INIT, true));
 
     // OPERATOR.leftStick().onTrue(CoordinationSubsystem.getInstance().setShiftingCommand(false)).onFalse(CoordinationSubsystem.getInstance().setShiftingCommand(true));
 
@@ -320,9 +331,10 @@ public class RobotContainer {
     OPERATOR.leftBumper().onTrue(shooterSub.setManualFastModeCommand().alongWith(turretSub.setManualFastModeCommand()));
     OPERATOR.b().onTrue(shooterSub.resetManualAimCommand().alongWith(turretSub.resetManualAimCommand()));
 
-    OPERATOR.povLeft().onTrue(new InstantCommand(() -> shooterSub.subtractManualVelocityShift(1)));
-    OPERATOR.povRight().onTrue(new InstantCommand(() -> shooterSub.addManualVelocityShift(1)));
-    OPERATOR.a().onTrue(new InstantCommand(() -> shooterSub.resetManualVelocityShift()));
+    // might have messed something up
+    // OPERATOR.povLeft().onTrue(new InstantCommand(() -> shooterSub.subtractManualVelocityShift(1)));
+    // OPERATOR.povRight().onTrue(new InstantCommand(() -> shooterSub.addManualVelocityShift(1)));
+    // OPERATOR.a().onTrue(new InstantCommand(() -> shooterSub.resetManualVelocityShift()));
 
     /* ================ TEST ONLY KEYBINDS ============== */
     

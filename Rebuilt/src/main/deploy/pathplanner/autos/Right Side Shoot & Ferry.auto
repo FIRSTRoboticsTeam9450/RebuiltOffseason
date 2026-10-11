@@ -76,6 +76,6 @@
     }
   },
   "resetOdom": true,
-  "folder": "Autos That Need Testing",
+  "folder": null,
   "choreoAuto": false
 }

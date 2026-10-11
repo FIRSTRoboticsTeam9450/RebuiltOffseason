@@ -56,6 +56,6 @@
     }
   },
   "resetOdom": true,
-  "folder": "Bump Autos",
+  "folder": null,
   "choreoAuto": false
 }

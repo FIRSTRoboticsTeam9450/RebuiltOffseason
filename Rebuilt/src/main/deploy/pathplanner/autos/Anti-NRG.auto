@@ -26,6 +26,6 @@
     }
   },
   "resetOdom": true,
-  "folder": "Anti-NRG",
+  "folder": null,
   "choreoAuto": false
 }
