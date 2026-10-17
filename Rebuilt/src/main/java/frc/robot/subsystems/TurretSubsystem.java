@@ -326,7 +326,11 @@ public class TurretSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // cachedAngleDeg = turretMotor.getPosition().getValueAsDouble() / TurretConstants.ROTOR_TO_SENSOR_RATIO * TurretConstants.DEGREE_CHANGE_PER_MOTOR_REVOLUTION + turretOffset;
-        cachedAngleDeg = turretEncoder.getAbsolutePosition().getValueAsDouble() / TurretConstants.SENSOR_TO_MECHANISM_RATIO * encoderToAngleMultiplier + turretOffset;
+        
+        // cachedAngleDeg = turretEncoder.getAbsolutePosition().getValueAsDouble() / TurretConstants.SENSOR_TO_MECHANISM_RATIO * encoderToAngleMultiplier + turretOffset;
+        // - new -
+        cachedAngleDeg = turretMotor.getPosition().getValueAsDouble() / TurretConstants.SENSOR_TO_MECHANISM_RATIO * encoderToAngleMultiplier + turretOffset;
+        
         cachedMotorVelocity = turretMotor.getVelocity().getValueAsDouble();
 
         if (Math.abs(turretMotor.getPosition().getValueAsDouble()) > (MAX_ANGLE_DEG + 5) / TurretConstants.ABS_ENCDR_POS_TO_ANGLE && CoordinationSubsystem.getInstance().getCurrentAbsoluteState() == AbsoluteStates.TRENCH) {
@@ -335,7 +339,11 @@ public class TurretSubsystem extends SubsystemBase {
             goodToMove = true;
         }
 
-        if (Math.abs(turretEncoder.getAbsolutePosition().getValueAsDouble() - turretEncoder.getPosition().getValueAsDouble()) > allowedEncoderDiff) {
+        // if (Math.abs(turretEncoder.getAbsolutePosition().getValueAsDouble() - turretEncoder.getPosition().getValueAsDouble()) > allowedEncoderDiff) {
+        // - new -
+        // I THINK CAN BE REMOVED
+        if (Math.abs(turretMotor.getPosition().getValueAsDouble() - turretMotor.getPosition().getValueAsDouble()) > allowedEncoderDiff) {
+
             resetEncodersRelativePosition();
         }
     
@@ -582,6 +590,9 @@ public class TurretSubsystem extends SubsystemBase {
                     );
                     
                     commandTurret(profiledSetpointDeg, 0.0, 0.0);
+
+                    // - new -
+                    turretMotor.setPosition(0);
                     break;
                 
                 case EMERGENCY:
@@ -1007,7 +1018,9 @@ public class TurretSubsystem extends SubsystemBase {
      * Call this when the turret is at its mechanical zero position.
      */
     public void zero() {
-        turretOffset = -turretEncoder.getAbsolutePosition().getValueAsDouble() * encoderToAngleMultiplier;
+        // turretOffset = -turretEncoder.getAbsolutePosition().getValueAsDouble() * encoderToAngleMultiplier;
+        // - new -
+        turretOffset = -turretMotor.getPosition().getValueAsDouble() * encoderToAngleMultiplier;        
     }
     
     /**
@@ -1021,11 +1034,13 @@ public class TurretSubsystem extends SubsystemBase {
      * Syncs the Turret motor's position with the encoders
      */
     public void syncMotorPosToEncoder() {
-        turretMotor.setPosition(cachedAngleDeg / TurretConstants.DEGREE_CHANGE_PER_MOTOR_REVOLUTION);
+        // Don't need question? -----
+        // turretMotor.setPosition(cachedAngleDeg / TurretConstants.DEGREE_CHANGE_PER_MOTOR_REVOLUTION);
     }
 
     public void resetEncodersRelativePosition() {
-        turretEncoder.setPosition(turretEncoder.getAbsolutePosition().getValueAsDouble());
+        // Don't need questin mark ----
+        // turretEncoder.setPosition(turretEncoder.getAbsolutePosition().getValueAsDouble());
     }
     
     /**
