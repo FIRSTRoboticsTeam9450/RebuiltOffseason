@@ -66,7 +66,6 @@ public class TurretSubsystem extends SubsystemBase {
     private static volatile TurretSubsystem INSTANCE;
     
     private final TalonFX turretMotor;
-    private final CANcoder turretEncoder;
     private final CommandSwerveDrivetrain drivetrain = RobotContainer.drivetrain;
     
     private CommandXboxController driverController;
@@ -84,7 +83,7 @@ public class TurretSubsystem extends SubsystemBase {
     private final double degreeOffsetToTarget = TurretConstants.TURRET_OFFSET_TO_TARGET;
     private final double encoderToAngleMultiplier = TurretConstants.ABS_ENCDR_POS_TO_ANGLE;
     
-    private final double allowedEncoderDiff = 0.05;
+    // private final double allowedEncoderDiff = 0.05;
     
     // Tunable parameters
     private final LoggedNetworkNumber logMaxVelocityDegPerSec = 
@@ -204,13 +203,7 @@ public class TurretSubsystem extends SubsystemBase {
             RobotConstants.MAIN_SYSTEMS_CANBUS
         );
 
-        turretEncoder = new CANcoder(
-            TurretConstants.DeviceIDs.kAbsEncoderID, 
-            RobotConstants.MAIN_SYSTEMS_CANBUS
-        );
-        
         // Configure hardware
-        configureEncoder();
         configureMotor();
         
         // Initialize feedforward controller
@@ -240,16 +233,6 @@ public class TurretSubsystem extends SubsystemBase {
      *  <li> Encoder Magnet Offset
      *  <ul/>
      */
-    private void configureEncoder() {
-        //IRL
-        CANcoderConfiguration encoderConfig = new CANcoderConfiguration();
-        
-        encoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
-        encoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
-        encoderConfig.MagnetSensor.MagnetOffset = TurretConstants.ENCODER_MAGNET_OFFSET;
-        
-        turretEncoder.getConfigurator().apply(encoderConfig);
-    }
     
     /**
      * Configures the motor <br><br/>
@@ -307,7 +290,6 @@ public class TurretSubsystem extends SubsystemBase {
         motorConfig.Slot0 = slot0;
         
         // Fused CANcoder feedback
-        motorConfig.Feedback.FeedbackRemoteSensorID = turretEncoder.getDeviceID();
         motorConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemoteCANcoder;
         motorConfig.Feedback.RotorToSensorRatio = TurretConstants.ROTOR_TO_SENSOR_RATIO;
         motorConfig.Feedback.SensorToMechanismRatio = TurretConstants.SENSOR_TO_MECHANISM_RATIO;
@@ -337,14 +319,6 @@ public class TurretSubsystem extends SubsystemBase {
             goodToMove = false;
         } else {
             goodToMove = true;
-        }
-
-        // if (Math.abs(turretEncoder.getAbsolutePosition().getValueAsDouble() - turretEncoder.getPosition().getValueAsDouble()) > allowedEncoderDiff) {
-        // - new -
-        // I THINK CAN BE REMOVED
-        if (Math.abs(turretMotor.getPosition().getValueAsDouble() - turretMotor.getPosition().getValueAsDouble()) > allowedEncoderDiff) {
-
-            resetEncodersRelativePosition();
         }
     
         // Update target based on current mode
@@ -898,10 +872,6 @@ public class TurretSubsystem extends SubsystemBase {
 
             Logger.recordOutput("Rebuilt/Turret/Device/MotorRevolutions", 
                 turretMotor.getPosition().getValueAsDouble());
-            Logger.recordOutput("Rebuilt/Turret/Device/AbsoluteEncoderPosition", 
-                turretEncoder.getAbsolutePosition().getValueAsDouble());
-            Logger.recordOutput("Rebuilt/Turret/Device/Encoder Relative Position", 
-                turretEncoder.getPosition().getValueAsDouble());
             Logger.recordOutput("Rebuilt/Turret/Device/MotorOutputVolts", 
                 turretMotor.getMotorVoltage().getValueAsDouble());
             Logger.recordOutput("Rebuilt/Turret/Device/MotorOutputAmps", 
@@ -1030,18 +1000,6 @@ public class TurretSubsystem extends SubsystemBase {
         turretMotor.setPosition(0);
     }
 
-    /**
-     * Syncs the Turret motor's position with the encoders
-     */
-    public void syncMotorPosToEncoder() {
-        // Don't need question? -----
-        // turretMotor.setPosition(cachedAngleDeg / TurretConstants.DEGREE_CHANGE_PER_MOTOR_REVOLUTION);
-    }
-
-    public void resetEncodersRelativePosition() {
-        // Don't need questin mark ----
-        // turretEncoder.setPosition(turretEncoder.getAbsolutePosition().getValueAsDouble());
-    }
     
     /**
      * Sets the driver controller for rumble feedback.
