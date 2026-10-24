@@ -66,8 +66,8 @@ public class RobotContainer {
    * Woojins Drive: 117.4, 0.054, 91.4, 0.76, 0.1, 0.01
    * Woojins Rotate: 120.1, 0.145, 92.2, 0.362, 0.035, 0.03
    */
-  public static BezierCurve driveBezier = new BezierCurve("drive", 151.0, 0.137, 116, 0.646, 0.1, 0.01);
-  public static BezierCurve rotateBezier = new BezierCurve("rotate", 164.8, 0.093, 100, 0.84, 0.035, 0.03);
+  public static BezierCurve driveBezier = new BezierCurve("drive", 89.4, 0.117, 88.5, 0.896, 0.1, 0.01);
+  public static BezierCurve rotateBezier = new BezierCurve("rotate", 89.4, 0.117, 88.5, 0.896, 0.035, 0.03);
 
   
   public static SlewRateLimiter driveXAccelLimiter = new SlewRateLimiter(5);
@@ -75,13 +75,13 @@ public class RobotContainer {
   public static SlewRateLimiter rotationAccelLimiter = new SlewRateLimiter(8.0);
 
   private static final double DEFAULT_MAX_SPEED = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
-  private static final double DEFAULT_MAX_ANGULAR_RATE = RotationsPerSecond.of(0.75).in(RadiansPerSecond);
+  private static final double DEFAULT_MAX_ANGULAR_RATE = RotationsPerSecond.of(1).in(RadiansPerSecond);
 
   public static boolean slewMode = false;
   private static final double scalarFactorForSpeed = 0.15;
   public static boolean inDefenseToggle = false;
 
-  public static double maxSpeed = DEFAULT_MAX_SPEED * 0.8;
+  public static double maxSpeed = DEFAULT_MAX_SPEED * 1;
   public static double maxAngularRate = DEFAULT_MAX_ANGULAR_RATE * 1;
 
   private final CommandXboxController DRIVER = new CommandXboxController(Constants.DRIVER_CONTROLLER_PORT);

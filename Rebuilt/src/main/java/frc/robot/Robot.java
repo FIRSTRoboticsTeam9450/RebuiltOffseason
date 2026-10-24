@@ -172,7 +172,7 @@ public class Robot extends LoggedRobot {
     // this line or comment it out.
     CoordinationSubsystem.getInstance().setHardTrenchOverride(false);
     IntakeSubsystem.getInstance().init();
-    RobotContainer.drivetrain.setStatorCurrentLimit(30);
+    RobotContainer.drivetrain.setStatorCurrentLimit(120);
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
