@@ -66,8 +66,8 @@ public class RobotContainer {
    * Woojins Drive: 117.4, 0.054, 91.4, 0.76, 0.1, 0.01
    * Woojins Rotate: 120.1, 0.145, 92.2, 0.362, 0.035, 0.03
    */
-  public static BezierCurve driveBezier = new BezierCurve("drive", 151.0, 0.137, 116, 0.646, 0.1, 0.01);
-  public static BezierCurve rotateBezier = new BezierCurve("rotate", 164.8, 0.093, 100, 0.84, 0.035, 0.03);
+  public static BezierCurve driveBezier = new BezierCurve("drive", 89.4, 0.117, 88.5, 0.896, 0.1, 0.01);
+  public static BezierCurve rotateBezier = new BezierCurve("rotate", 89.4, 0.117, 88.5, 0.896, 0.035, 0.03);
 
   
   public static SlewRateLimiter driveXAccelLimiter = new SlewRateLimiter(5);
